@@ -9,6 +9,8 @@ license = "MIT/Apache-2.0"
 readme = "README.md"
 
 description = "Macro for including trees, strings, arrays from files."
+keywords = ["procedural-macros", "macros", "code-generation", "code-transformation", "file-io", "clucompany"]
+categories = ["development-tools", "development-tools::build-utils"]
 
 [lib]
 proc-macro = true
