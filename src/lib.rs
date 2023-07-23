@@ -40,7 +40,7 @@
 use include_tt::include_tt;
 use std::fmt::Write;
 
-{ // Substitution of a macro component from a file.
+{ // Embedding compiler trees from a file in an arbitrary place of other macros.
 	let a = 10;
 	let b = 20;
 	let mut end_str = String::new();
@@ -187,7 +187,7 @@ fn search_include_and_replacegroup(
 /// use include_tt::include_tt;
 /// use std::fmt::Write;
 /// 
-/// { // Substitution of a macro component from a file.
+/// { // Embedding compiler trees from a file in an arbitrary place of other macros.
 ///		let a = 10;
 ///		let b = 20;
 ///		

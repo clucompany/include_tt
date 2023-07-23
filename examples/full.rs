@@ -73,7 +73,7 @@ fn main() {
 		assert_eq!(array, b"a, b");
 	}
 	
-	{ // Substitution of a macro component from a file.
+	{ // Embedding compiler trees from a file in an arbitrary place of other macros.
 		let a = 10;
 		let b = 20;
 		
