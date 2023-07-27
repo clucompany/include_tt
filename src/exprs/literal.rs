@@ -1,5 +1,5 @@
 
-use std::{ops::Deref, fmt::{Debug, Display}};
+use std::{ops::Deref, fmt::{Debug, Display}, borrow::{Cow, Borrow}};
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use crate::sg_err;
 
@@ -74,6 +74,22 @@ impl Display for ExprLit {
 	}
 }
 
+impl ToOwned for ExprLit {
+	type Owned = String;
+	
+	#[inline]
+	fn to_owned(&self) -> Self::Owned {
+		self.as_str().to_owned()
+	}
+}
+
+impl Borrow<ExprLit> for String {
+	#[inline]
+	fn borrow(&self) -> &ExprLit {
+		unsafe { ExprLit::unchecked(self.as_str()) } // TODO
+	}
+}
+
 impl ExprLit {
 	/// Creating `ExprLit` without clipping.
 	#[inline]
@@ -81,6 +97,12 @@ impl ExprLit {
 		// It is safe, there is no other way than to "transmute", "box" 
 		// to create a dimensionless structure.
 		unsafe { &*(a as *const _ as *const ExprLit) }
+	}
+	
+	/// Creating `ExprLit` without clipping.
+	#[inline(always)]
+	pub const unsafe fn unchecked(a: &str) -> &Self {
+		Self::__new(a)
 	}
 	
 	/// Create an `ExprLit` from the expression `"test"` and return it.
@@ -106,12 +128,53 @@ impl ExprLit {
 			});
 		}
 		
-		if let (Some(b'"'), Some(b'"')) = (a_array.get(0), a_array.get(len-1)) {} else {
+		if let (Some(b'"'), Some(b'"')) = (a_array.get(0), a_array.get(len-1)) {} else
+		if let (Some(b'\''), Some(b'\'')) = (a_array.get(0), a_array.get(len-1)) {} else {
 			return err(ExprLitTryNewErr::ExpQuotes);
 		}
 
 		next(
 			Self::__new(&a[1..len-1])
+		)
+	}
+	
+	/// Create an `ExprLit` from the expression `"test"` and return it.
+	pub fn try_new_search_and_autoreplaceshielding_fn<'a, R>(a: &'a str, next: impl FnOnce(Cow<'a, ExprLit>) -> R, err: impl FnOnce(ExprLitTryNewErr) -> R) -> R {
+		Self::try_new_fn(
+			a, 
+			|exprlit| match a.find('\\') {
+				None => next(Cow::Borrowed(exprlit)),
+				Some(pos) => {
+					let mut result = String::with_capacity(a.len());
+					
+					let all_str = match pos {
+						0 => exprlit.as_str(),
+						pos => {
+							let (push_str, all_str) = exprlit.split_at(pos-1);
+							result.push_str(push_str);
+							
+							all_str
+						},
+					};
+					
+					let mut iter = all_str.chars();
+					while let Some(asymb) = iter.next() {
+						if asymb == '\\' {
+							match iter.next() {
+								Some(asymb) => result.push(asymb),
+								None => break,
+							}
+							
+							continue;
+						}
+						
+						result.push(asymb);
+					}
+					
+					next(Cow::Owned(result))
+				},
+			},
+			|e| err(e)
 		)
 	}
 	

@@ -1,7 +1,7 @@
 
 use std::slice::IterMut;
 use proc_macro2::{Group, Delimiter, TokenTree as TokenTree2};
-use crate::{TreeResult, trees::sg_err};
+use crate::{TreeResult, trees::{sg_err, ttry}, exprs::literal::ExprLit};
 use std::fmt::Write;
 
 /// This function allows you to correctly end a group with 
@@ -17,6 +17,7 @@ pub (crate) fn check_correct_endgroup<'i>(
 	let group_span = group.span();
 	
 	/// Assembly &[char] array into final string `A`, `B`, `C`
+	#[inline]
 	fn make_endroup_str(endgroup: &[char]) -> String {
 		let mut str = String::with_capacity(endgroup.len() * 3);
 		
@@ -83,4 +84,71 @@ pub (crate) fn check_correct_endgroup<'i>(
 			}
 		},
 	}
+}
+
+/// A small function that mimics the incomplete behavior of stringify for groups.
+pub fn g_stringify(group: &'_ Group) -> TreeResult<Option<String>> {
+	let mut result = String::new();
+
+	let iter = group.stream().into_iter();
+	for tt in iter {
+		ttry!(__g_stringify(tt, &mut result));
+	}
+	
+	if result.is_empty() {
+		return TreeResult::Ok(None);
+	}
+	
+	TreeResult::Ok(Some(result))
+}
+
+fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
+	match tt {
+		TokenTree2::Group(group) => {
+			let iter = group.stream().into_iter();
+			for tt in iter {
+				ttry!(__g_stringify(tt, w));
+			}
+		},
+		TokenTree2::Ident(i) => {
+			if let Err(e) = w.write_str(&i.to_string()) {
+				let debug = format!("{:?}", e);
+				sg_err! {
+					return [i.span()]: "Ident, ", #debug
+				}
+			}
+		},
+		TokenTree2::Punct(p) => {
+			if let Err(e) = w.write_char(p.as_char()) {
+				let debug = format!("{:?}", e);
+				sg_err! {
+					return [p.span()]: "Punct, ", #debug
+				}
+			}
+		},
+		TokenTree2::Literal(l) => {
+			return ExprLit::try_new_search_and_autoreplaceshielding_fn(
+				&l.to_string(),
+				|sspath| match w.write_str(&sspath) {
+					Ok(..) => TreeResult::Ok(()),
+					Err(e) => {
+						let debug = format!("{:?}", e);
+						sg_err! {
+							return [l.span()]: "Literal, ", #debug
+						}
+					},
+				},
+				|e| {
+					let span = l.span();
+					let debug = e.into_tt_err(span);
+					
+					sg_err! {
+						return [span]: "Literal, ", #debug
+					}
+				},
+			)
+		},
+	}
+	
+	TreeResult::Ok(())
 }

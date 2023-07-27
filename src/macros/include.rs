@@ -1,7 +1,7 @@
 
 use std::{io::Read, fs::File};
 use proc_macro2::{TokenTree as TokenTree2, Group, TokenStream as TokenStream2, Delimiter, Span, Literal};
-use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree, LoadFileAndAutoMakeTreeErr}}, exprs::literal::ExprLit};
+use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree, LoadFileAndAutoMakeTreeErr}, ttry, group::g_stringify}, exprs::literal::ExprLit};
 
 /// A trait that specifies the final behavior for the `include` macro.
 pub trait BehMacroInclude {
@@ -63,9 +63,12 @@ impl BehMacroInclude for IncludeStr {
 	) -> TreeResult<Option<Self::Result>> {
 		let data = match std::fs::read_to_string(sspath.as_str()) {
 			Ok(a) => a,
-			Err(e) => return LoadFileAndAutoMakeTreeErr::ReadToString(e)
-				.into_tt_err(literal_span)
-				.into(),
+			Err(e) => return LoadFileAndAutoMakeTreeErr::ReadToString {
+				err: e,
+				path: sspath.as_str()
+			}
+			.into_tt_err(literal_span)
+			.into(),
 		};
 		
 		let mut lit = Literal::string(&data);
@@ -93,16 +96,22 @@ impl BehMacroInclude for IncludeArr {
 		let vec = {
 			let mut file = match File::open(sspath.as_str()) {
 				Ok(a) => a,
-				Err(e) => return LoadFileAndAutoMakeTreeErr::ReadToString(e)
-					.into_tt_err(literal_span)
-					.into(),
+				Err(e) => return LoadFileAndAutoMakeTreeErr::ReadToString {
+					err: e,
+					path: sspath.as_str()
+				}
+				.into_tt_err(literal_span)
+				.into(),
 			};
 			
 			let mut vec = Vec::new(); // capacity is not required.
 			if let Err(e) = file.read_to_end(&mut vec) {
-				return LoadFileAndAutoMakeTreeErr::ReadToString(e)
-					.into_tt_err(literal_span)
-					.into();
+				return LoadFileAndAutoMakeTreeErr::ReadToString {
+					err: e,
+					path: sspath.as_str()
+				}
+				.into_tt_err(literal_span)
+				.into();
 			};
 			
 			vec
@@ -131,16 +140,31 @@ pub fn macro_rule_include<'mflush, A>(
 	}
 	
 	if let Some(g_stream) = stream0 {
+		// The path is a group of TokenTrees that can be converted to 
+		// a string and concatenated.
+		if let TokenTree2::Group(group) = g_stream {
+			if let Some(sspath) = ttry!(g_stringify(&group)) {
+				let lspan = group.span();
+				let fstream = A::make_tree(
+					unsafe { ExprLit::unchecked(&sspath) },
+					group.span(),
+					lspan
+				);
+				
+				return fstream;
+			}
+		} else
+		// The path is a single string
 		if let TokenTree2::Literal(literal) = g_stream {
 			let fstream = {
 				let sspath = literal.to_string();
 				let lspan = literal.span();
 				
-				ExprLit::try_new_fn(
+				ExprLit::try_new_search_and_autoreplaceshielding_fn(
 					&sspath,
 					|sspath| {
 						A::make_tree(
-							sspath, 
+							&sspath, 
 							group.span(),
 							lspan
 						)
@@ -152,7 +176,7 @@ pub fn macro_rule_include<'mflush, A>(
 			return fstream;
 		}else {
 			sg_err! {
-				return [g_stream.span()]: "The expected path must be written in string format.."
+				return [g_stream.span()]: "The path was expected as a single string (example: \"../test.tt\") or a path formatted as separate TokenTrees (example: ['.' '.' test \".tt\"])."
 			}
 		}
 	}
