@@ -9,9 +9,23 @@ pub struct ExprLit {
 	data: str
 }
 
+impl PartialEq<ExprLit> for ExprLit {
+	#[inline(always)]
+	fn eq(&self, other: &ExprLit) -> bool {
+		PartialEq::eq(self.as_str(), other.as_str())
+	}
+}
+
+impl PartialEq<str> for ExprLit {
+	#[inline(always)]
+	fn eq(&self, other: &str) -> bool {
+		PartialEq::eq(self.as_str(), other)
+	}
+}
+
 /// Errors received in case of a 
 /// literal expression parsing error.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ExprLitTryNewErr {
 	/// More characters were expected to be parsed.
 	ExpLen {
@@ -105,4 +119,21 @@ impl ExprLit {
 	pub const fn as_str(&self) -> &str {
 		&self.data
 	}
+}
+
+#[cfg(test)]
+#[test]
+fn test_literal() {
+	assert_eq!(
+		ExprLit::try_new(""),
+		Err(ExprLitTryNewErr::ExpLen { current: 0, exp: 2 })
+	);
+	assert_eq!(
+		ExprLit::try_new("\""),
+		Err(ExprLitTryNewErr::ExpLen { current: 1, exp: 2 })
+	);
+	assert_eq!(
+		ExprLit::try_new("\"\""),
+		Ok(ExprLit::__new("")),
+	);
 }

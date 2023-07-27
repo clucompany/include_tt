@@ -74,7 +74,7 @@ use std::fmt::Write;
 */
 
 use std::slice::IterMut;
-use proc_macro2::TokenTree;
+use proc_macro2::TokenTree as TokenTree2;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use trees::sg_err;
@@ -113,18 +113,18 @@ pub (crate) mod macros {
 /// 
 /// The design of this feature has been adapted to search for attachments.
 fn search_include_and_replacegroup(
-	iter: &mut IterMut<'_, TokenTree>, 
+	iter: &mut IterMut<'_, TokenTree2>,
 	_is_zero_glevel: bool
 ) -> SearchGroup {
 	while let Some(m_punct) = iter.next() {
 		match m_punct {
-			TokenTree::Punct(punct) => {
+			TokenTree2::Punct(punct) => {
 				if punct.as_char() == '#' {
 					if let Some(m_ident) = iter.next() {
-						if let TokenTree::Ident(ident) = m_ident {
+						if let TokenTree2::Ident(ident) = m_ident {
 							let macro_fn = {
 								match ident.to_string().as_str() {
-									"include" => macro_rule_include::<IncludeTt>,
+									"include" | "include_tt" => macro_rule_include::<IncludeTt>,
 									"include_str" => macro_rule_include::<IncludeStr>,
 									"include_arr" => macro_rule_include::<IncludeArr>,
 									
@@ -133,10 +133,10 @@ fn search_include_and_replacegroup(
 							};
 							
 							if let Some(m_punct2) = iter.next() {
-								if let TokenTree::Punct(punct2) = m_punct2 {
+								if let TokenTree2::Punct(punct2) = m_punct2 {
 									if punct2.as_char() == '!' {
 										if let Some(m_group) = iter.next() {
-											if let TokenTree::Group(group) = m_group {
+											if let TokenTree2::Group(group) = m_group {
 												let result = ttry!(macro_fn(
 													group,
 												));
@@ -165,7 +165,7 @@ fn search_include_and_replacegroup(
 			}
 			// If this is a group, then you need to go down inside the 
 			// group and look for the necessary macros there.
-			TokenTree::Group(group) => match support_replace_tree_in_group(
+			TokenTree2::Group(group) => match support_replace_tree_in_group(
 				group,
 				|mut iter| search_include_and_replacegroup(&mut iter, false),
 			) {
