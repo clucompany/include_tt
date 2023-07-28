@@ -78,7 +78,7 @@ use proc_macro2::TokenTree as TokenTree2;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use trees::sg_err;
-use crate::{trees::{null::make_null_ttree, replace::{support_replace_tree_in_group, support_replace_tree_in_stream}, result::TreeResult, ttry, search::SearchGroup}, macros::include::{macro_rule_include, IncludeTt, IncludeStr, IncludeArr}};
+use crate::{trees::{null::make_null_ttree, replace::{support_replace_tree_in_group, support_replace_tree_in_stream}, result::TreeResult, ttry, search::SearchGroup}, macros::include::{macro_rule_include, IncludeTt, IncludeStr, IncludeArr, IncludeTtAndFixUnkStartToken}};
 
 /// Components, templates, code for the search 
 /// and final construction of trees.
@@ -125,6 +125,7 @@ fn search_include_and_replacegroup(
 							let macro_fn = {
 								match ident.to_string().as_str() {
 									"include" | "include_tt" => macro_rule_include::<IncludeTt>,
+									"include_and_fix_unknown_start_token" => macro_rule_include::<IncludeTtAndFixUnkStartToken>,
 									"include_str" => macro_rule_include::<IncludeStr>,
 									"include_arr" => macro_rule_include::<IncludeArr>,
 									

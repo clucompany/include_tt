@@ -37,10 +37,12 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 pub (crate) fn load_file_and_automake_tree<'a, R>(
 	path: &'a str,
 	
+	prepare_file_str: impl FnOnce(&mut String),
+	
 	next: impl FnOnce(TokenStream2) -> R,
 	err: impl FnOnce(LoadFileAndAutoMakeTreeErr<'a>) -> R,
 ) -> R {
-	let data = match std::fs::read_to_string(path) {
+	let mut data = match std::fs::read_to_string(path) {
 		Ok(a) => a,
 		Err(e) => return err(LoadFileAndAutoMakeTreeErr::ReadToString {
 			err: e, 
@@ -51,6 +53,8 @@ pub (crate) fn load_file_and_automake_tree<'a, R>(
 	if data.is_empty() {
 		return next(Default::default());
 	}
+	
+	prepare_file_str(&mut data);
 	
 	match syn::parse_str(&data) {
 		Ok(a) => next(a),
