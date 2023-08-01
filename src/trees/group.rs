@@ -127,7 +127,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 			}
 		},
 		TokenTree2::Literal(l) => {
-			return ExprLit::try_new_search_and_autoreplaceshielding_fn(
+			return ExprLit::try_new_fn(
 				&l.to_string(),
 				|sspath| match w.write_str(&sspath) {
 					Ok(..) => TreeResult::Ok(()),

@@ -32,6 +32,7 @@ pub enum ExprLitTryNewErr {
 		current: usize,
 		exp: usize,
 	},
+	
 	/// A double closing of quotes was expected.
 	ExpQuotes,
 }
@@ -129,16 +130,46 @@ impl ExprLit {
 		}
 		
 		if let (Some(b'"'), Some(b'"')) = (a_array.get(0), a_array.get(len-1)) {} else
-		if let (Some(b'\''), Some(b'\'')) = (a_array.get(0), a_array.get(len-1)) {} else {
+		if let (Some(b'\''), Some(b'\'')) = (a_array.get(0), a_array.get(len-1)) {
+			if len != 3 {
+				/*
+					We exclude the possibility of using `'` as more 
+					than one character.
+				*/
+				return err(
+					ExprLitTryNewErr::ExpLen {
+						current: len, 
+						exp: 3
+					}
+				)
+			}
+		} else {
 			return err(ExprLitTryNewErr::ExpQuotes);
 		}
-
-		next(
-			Self::__new(&a[1..len-1])
+		
+		next({
+			debug_assert_eq!(a.get(1..len-1).is_some(), true);
+			
+			Self::__new(unsafe {
+				a.get_unchecked(1..len-1)
+			})
+		})
+	}
+	
+	/// Create an `ExprLit` from the expression `"test"` and return it.
+	#[inline]
+	#[deprecated(since="1.0.2", note="please use `try_new` instead")]
+	pub fn try_new_search_and_autoreplaceshielding<'a>(a: &'a str) -> Result<Cow<'a, ExprLit>, ExprLitTryNewErr> {
+		#[allow(deprecated)]
+		Self::try_new_search_and_autoreplaceshielding_fn(
+			a, 
+			|a| Ok(a),
+			|e| Err(e),
 		)
 	}
 	
 	/// Create an `ExprLit` from the expression `"test"` and return it.
+	#[deprecated(since="1.0.2", note="please use `try_new_fn` instead")]
 	pub fn try_new_search_and_autoreplaceshielding_fn<'a, R>(a: &'a str, next: impl FnOnce(Cow<'a, ExprLit>) -> R, err: impl FnOnce(ExprLitTryNewErr) -> R) -> R {
 		Self::try_new_fn(
 			a, 
@@ -178,6 +209,7 @@ impl ExprLit {
 		)
 	}
 	
+	/// Getting a string of actual data.
 	#[inline(always)]
 	pub const fn as_str(&self) -> &str {
 		&self.data
@@ -187,6 +219,10 @@ impl ExprLit {
 #[cfg(test)]
 #[test]
 fn test_literal() {
+	/*
+		Checking the correct operation of ExprLit.
+	*/
+	
 	assert_eq!(
 		ExprLit::try_new(""),
 		Err(ExprLitTryNewErr::ExpLen { current: 0, exp: 2 })
@@ -198,5 +234,9 @@ fn test_literal() {
 	assert_eq!(
 		ExprLit::try_new("\"\""),
 		Ok(ExprLit::__new("")),
+	);
+	assert_eq!(
+		ExprLit::try_new("'\\'"),
+		Ok(ExprLit::__new("\\")),
 	);
 }

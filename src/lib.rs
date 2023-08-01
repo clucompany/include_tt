@@ -114,7 +114,6 @@ pub (crate) mod macros {
 /// The design of this feature has been adapted to search for attachments.
 fn search_include_and_replacegroup(
 	iter: &mut IterMut<'_, TokenTree2>,
-	_is_zero_glevel: bool
 ) -> SearchGroup {
 	while let Some(m_punct) = iter.next() {
 		match m_punct {
@@ -125,11 +124,14 @@ fn search_include_and_replacegroup(
 							let macro_fn = {
 								match ident.to_string().as_str() {
 									"include" | "include_tt" => macro_rule_include::<IncludeTt>,
-									"include_and_fix_unknown_start_token" => macro_rule_include::<IncludeTtAndFixUnkStartToken>,
+									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => macro_rule_include::<IncludeTtAndFixUnkStartToken>,
+									
 									"include_str" => macro_rule_include::<IncludeStr>,
 									"include_arr" => macro_rule_include::<IncludeArr>,
 									
-									_ => continue,
+									_ => sg_err! {
+										return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`"
+									},
 								}
 							};
 							
@@ -168,7 +170,7 @@ fn search_include_and_replacegroup(
 			// group and look for the necessary macros there.
 			TokenTree2::Group(group) => match support_replace_tree_in_group(
 				group,
-				|mut iter| search_include_and_replacegroup(&mut iter, false),
+				|mut iter| search_include_and_replacegroup(&mut iter),
 			) {
 				SearchGroup::Break => continue,
 				result @ SearchGroup::Error(..) => return result,
@@ -226,10 +228,9 @@ pub fn include_tt(input: TokenStream) -> TokenStream {
 
 	match support_replace_tree_in_stream(
 		&mut tt,
-		|mut iter| search_include_and_replacegroup(&mut iter, true)
+		|mut iter| search_include_and_replacegroup(&mut iter)
 	) {
-		SearchGroup::Error(e) => return e.into(),
-		SearchGroup::Break => {},
+		SearchGroup::Error(e) => e.into(),
+		SearchGroup::Break => tt.into(),
 	}
-	tt.into()
 }

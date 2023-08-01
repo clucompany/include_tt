@@ -5,10 +5,14 @@ use syn::Error as SynError;
 
 #[derive(Debug)]
 pub (crate) enum LoadFileAndAutoMakeTreeErr<'a> {
+	/// The error type for I/O operations of the 
+	/// [Read], [Write], [Seek], and associated traits.
 	ReadToString {
 		err: IOError, 
 		path: &'a str,
 	},
+	
+	/// Error returned when a Syn parser cannot parse the input tokens.
 	ParseStr(SynError),
 }
 
@@ -37,9 +41,12 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 pub (crate) fn load_file_and_automake_tree<'a, R>(
 	path: &'a str,
 	
+	// Preprocessing a file loaded into a String before passing it directly to the parser.
+	//
+	// (If this is not required, it is enough to leave the closure empty.)
 	prepare_file_str: impl FnOnce(&mut String),
 	
-	next: impl FnOnce(TokenStream2) -> R,
+	next: impl FnOnce(Option<TokenStream2>) -> R,
 	err: impl FnOnce(LoadFileAndAutoMakeTreeErr<'a>) -> R,
 ) -> R {
 	let mut data = match std::fs::read_to_string(path) {
@@ -51,13 +58,13 @@ pub (crate) fn load_file_and_automake_tree<'a, R>(
 	};
 	
 	if data.is_empty() {
-		return next(Default::default());
+		return next(None);
 	}
 	
 	prepare_file_str(&mut data);
 	
 	match syn::parse_str(&data) {
-		Ok(a) => next(a),
-		Err(e) => return err(LoadFileAndAutoMakeTreeErr::ParseStr(e)),
+		Ok(a) => next(Some(a)),
+		Err(e) => err(LoadFileAndAutoMakeTreeErr::ParseStr(e)),
 	}
 }
