@@ -74,7 +74,7 @@ use std::fmt::Write;
 */
 
 use std::slice::IterMut;
-use proc_macro2::TokenTree as TokenTree2;
+use proc_macro2::{TokenTree as TokenTree2, Group};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use trees::sg_err;
@@ -121,19 +121,17 @@ fn search_include_and_replacegroup(
 				if punct.as_char() == '#' {
 					if let Some(m_ident) = iter.next() {
 						if let TokenTree2::Ident(ident) = m_ident {
-							let macro_fn = {
+							let macro_fn: Option<fn(&Group) -> TreeResult<TokenTree2>> = {
 								let str_ident = ident.to_string();
 								
 								match str_ident.as_str() {
-									"include" | "include_tt" => macro_rule_include::<IncludeTt>,
-									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => macro_rule_include::<IncludeTtAndFixUnkStartToken>,
+									"include" | "include_tt" => Some(macro_rule_include::<IncludeTt>),
+									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => Some(macro_rule_include::<IncludeTtAndFixUnkStartToken>),
 									
-									"include_str" => macro_rule_include::<IncludeStr>,
-									"include_arr" => macro_rule_include::<IncludeArr>,
+									"include_str" => Some(macro_rule_include::<IncludeStr>),
+									"include_arr" => Some(macro_rule_include::<IncludeArr>),
 									
-									_ => sg_err! {
-										return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`"
-									},
+									_ => None,
 								}
 							};
 							
@@ -142,6 +140,13 @@ fn search_include_and_replacegroup(
 									if punct2.as_char() == '!' {
 										if let Some(m_group) = iter.next() {
 											if let TokenTree2::Group(group) = m_group {
+												let macro_fn = match macro_fn {
+													Some(a) => a,
+													None => sg_err! {
+														return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`"
+													}
+												};
+												
 												let result = ttry!( macro_fn(group) );
 												
 												let nulltt = make_null_ttree();
@@ -159,8 +164,10 @@ fn search_include_and_replacegroup(
 								}
 							}
 							
-							sg_err! {
-								return [ident.span()]: "Unknown macro, expected `include(...)`, `include_tt(...)`, `include_and_fix_unknown_start_token(...)`, `include_tt_and_fix_unknown_start_token(...)`, `include_str(...)`, `include_arr(...)`"
+							if macro_fn.is_some() { // The required macro was defined earlier, which means an error.
+								sg_err! {
+									return [ident.span()]: "Unknown macro, expected `include(...)`, `include_tt(...)`, `include_and_fix_unknown_start_token(...)`, `include_tt_and_fix_unknown_start_token(...)`, `include_str(...)`, `include_arr(...)`"
+								}
 							}
 						}
 					}

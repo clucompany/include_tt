@@ -155,6 +155,7 @@ impl ExprLit {
 		next({
 			debug_assert_eq!(a.get(1..len-1).is_some(), true);
 			
+			// It's safe, checks are done above (above `debug_assert`).
 			let str = unsafe {
 				a.get_unchecked(1..len-1)
 			};

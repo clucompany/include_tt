@@ -3,6 +3,7 @@ use proc_macro2::{TokenStream as TokenStream2, Span};
 use std::io::Error as IOError;
 use syn::Error as SynError;
 
+/// Variants of errors when loading a file and presenting it as a set of compiler trees.
 #[derive(Debug)]
 pub enum LoadFileAndAutoMakeTreeErr<'a> {
 	/// The error type for I/O operations of the 
@@ -17,6 +18,8 @@ pub enum LoadFileAndAutoMakeTreeErr<'a> {
 }
 
 impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
+	/// The error type for I/O operations of the 
+	/// [Read], [Write], [Seek], and associated traits.
 	#[inline(always)]
 	pub const fn read_to_string(err: IOError, path: &'a str) -> Self {
 		Self::ReadToString {

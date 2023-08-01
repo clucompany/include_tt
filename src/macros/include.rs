@@ -335,7 +335,7 @@ pub fn macro_rule_include<A>(
 			// a string and concatenated.
 			
 			match ttry!( g_stringify(&g_stream) ) {
-				Some(stringify) =>  A::make_tree(
+				Some(stringify) => A::make_tree(
 					// The value is already ready to be used as a path.
 					BehMacroArg0::Stringify(stringify),
 					
