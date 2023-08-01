@@ -129,9 +129,14 @@ impl ExprLit {
 			});
 		}
 		
-		if let (Some(b'"'), Some(b'"')) = (a_array.get(0), a_array.get(len-1)) {} else
-		if let (Some(b'\''), Some(b'\'')) = (a_array.get(0), a_array.get(len-1)) {
-			if len != 3 {
+		debug_assert_eq!(a_array.get(0).is_some(), true);
+		debug_assert_eq!(a_array.get(len -1).is_some(), true);
+		/*
+			This is safe, the extra necessary checks are done in a separate `if` above.
+		*/
+		match unsafe { (a_array.get_unchecked(0), a_array.get_unchecked(len -1)) } {
+			(b'"', b'"') => /* line */ {}, // GOOD,
+			(b'\'', b'\'') if len != 3 => { /* one_symbol */
 				/*
 					We exclude the possibility of using `'` as more 
 					than one character.
@@ -141,18 +146,19 @@ impl ExprLit {
 						current: len, 
 						exp: 3
 					}
-				)
-			}
-		} else {
-			return err(ExprLitTryNewErr::ExpQuotes);
+				);
+			},
+			(b'\'', b'\'') => /* line */ {}, // GOOD,
+			_ => return err(ExprLitTryNewErr::ExpQuotes),
 		}
 		
 		next({
 			debug_assert_eq!(a.get(1..len-1).is_some(), true);
 			
-			Self::__new(unsafe {
+			let str = unsafe {
 				a.get_unchecked(1..len-1)
-			})
+			};
+			Self::__new(str)
 		})
 	}
 	
@@ -207,6 +213,12 @@ impl ExprLit {
 			},
 			|e| err(e)
 		)
+	}
+	
+	#[inline(always)]
+	/// Returns `true` if self has a length of zero bytes.
+	pub const fn is_empty(&self) -> bool {
+		self.data.is_empty()
 	}
 	
 	/// Getting a string of actual data.

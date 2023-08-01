@@ -7,15 +7,13 @@ use std::fmt::Write;
 /// This function allows you to correctly end a group with 
 /// a delimiter () and skip ';' if it is needed.
 #[allow(dead_code)]
-pub (crate) fn check_correct_endgroup<'i>(
+pub fn check_correct_endgroup<'i>(
 	group: &'_ Group,
 	
 	iter: &mut IterMut<'i, TokenTree2>,
 	
 	endgroup: &[char],
 ) -> TreeResult<Option<&'i mut TokenTree2>> {
-	let group_span = group.span();
-	
 	/// Assembly &[char] array into final string `A`, `B`, `C`
 	#[inline]
 	fn make_endroup_str(endgroup: &[char]) -> String {
@@ -37,7 +35,7 @@ pub (crate) fn check_correct_endgroup<'i>(
 	}
 	
 	match group.delimiter() {
-		Delimiter::Parenthesis => {
+		Delimiter::Parenthesis => { /* `( ... )` */
 			let optm_punct = iter.next();
 			
 			if let Some(ref m_punct) = optm_punct {
@@ -73,11 +71,11 @@ pub (crate) fn check_correct_endgroup<'i>(
 			} else {
 				let e_group_str = make_endroup_str(endgroup);
 				sg_err! {
-					return [group_span]: "", #e_group_str, " was expected."
+					return [group.span()]: "", #e_group_str, " was expected."
 				}
 			}
 		},
-		Delimiter::Brace => return TreeResult::Ok(None), // ok
+		Delimiter::Brace => return TreeResult::Ok(None), // `{ ... }`, ok
 		Delimiter::Bracket | Delimiter::None => {
 			sg_err! {
 				return [group.span()]: "Unsupported group type."
@@ -92,7 +90,9 @@ pub fn g_stringify(group: &'_ Group) -> TreeResult<Option<String>> {
 
 	let iter = group.stream().into_iter();
 	for tt in iter {
-		ttry!(__g_stringify(tt, &mut result));
+		ttry!(
+			__g_stringify(tt, &mut result)
+		);
 	}
 	
 	if result.is_empty() {
@@ -103,6 +103,9 @@ pub fn g_stringify(group: &'_ Group) -> TreeResult<Option<String>> {
 }
 
 fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
+	/*
+		TODO, Not fully covered by tests.
+	*/
 	match tt {
 		TokenTree2::Group(group) => {
 			let iter = group.stream().into_iter();

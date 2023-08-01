@@ -140,22 +140,14 @@ fn search_include_and_replacegroup(
 									if punct2.as_char() == '!' {
 										if let Some(m_group) = iter.next() {
 											if let TokenTree2::Group(group) = m_group {
-												let result = ttry!(macro_fn(
-													group,
-												));
+												let result = ttry!( macro_fn(group) );
 												
-												match result {
-													None => {}, // skip,
-													Some(new_tt) => {
-														let nulltt = make_null_ttree();
-													
-														*m_ident = nulltt.clone();
-														*m_punct = nulltt.clone();
-														*m_punct2 = nulltt;
-														
-														*m_group = new_tt;
-													},
-												}
+												let nulltt = make_null_ttree();
+												
+												*m_ident = nulltt.clone();
+												*m_punct = nulltt.clone();
+												*m_punct2 = nulltt.clone();
+												*m_group = result;
 											}
 										}
 									}

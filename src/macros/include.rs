@@ -1,7 +1,7 @@
 
 use std::{io::Read, fs::File};
 use proc_macro2::{TokenTree as TokenTree2, Group, TokenStream as TokenStream2, Delimiter, Span, Literal};
-use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree, LoadFileAndAutoMakeTreeErr}, ttry, group::g_stringify}, exprs::literal::{ExprLit, ExprLitTryNewErr}};
+use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree_fn, LoadFileAndAutoMakeTreeErr}, ttry, group::g_stringify}, exprs::literal::{ExprLit, ExprLitTryNewErr}};
 
 /// A trait that specifies the final behavior for the `include` macro.
 pub trait BehMacroInclude {
@@ -16,9 +16,13 @@ pub trait BehMacroInclude {
 		group_span: Span,
 		// `span` indicating a literal occurrence or group describing a future path.
 		literal_span: Span
-	) -> TreeResult<Option<Self::Result>>;
+	) -> TreeResult<Self::Result>;
+	
+	/// Create an empty valid tree.
+	fn make_empty_tree(
+		group_span: Span,
+	) -> Self::Result;
 }
-
 
 /// An argument, basically a path, written in `literals` or created with 
 /// a `group` via `stringify`.
@@ -32,9 +36,10 @@ pub enum BehMacroArg0 {
 }
 
 impl BehMacroArg0 {
-	/// Get a data string without special characters, with final escaping (if required).
+	/// Get a data string without special characters, 
+	/// with final escaping (if required).
 	#[inline]
-	pub fn get_str<R>(
+	pub fn get_str_fn<R>(
 		&self,
 		
 		next: impl FnOnce(&'_ str) -> R, 
@@ -45,7 +50,12 @@ impl BehMacroArg0 {
 			Self::ExpMakeExprLit(a) => {
 				ExprLit::try_new_fn(
 					a, 
-					|a| next(&a),
+					|a| {
+						let result = next(&a);
+						drop(a);
+						
+						result
+					},
 					err
 				)
 			}
@@ -59,15 +69,25 @@ pub (crate) enum IncludeTt {}
 
 impl BehMacroInclude for IncludeTt {
 	type Result = TokenTree2;
-
+	
+	fn make_empty_tree(group_span: Span) -> Self::Result {
+		let mut ngroup = Group::new(
+			Delimiter::None,
+			TokenStream2::new(),
+		);
+		ngroup.set_span(group_span);
+		
+		TokenTree2::Group(ngroup)
+	}
+	
 	fn make_tree(
 		arg0: BehMacroArg0,
 		
 		group_span: Span,
 		literal_span: Span,
-	) -> TreeResult<Option<Self::Result>> {
-		arg0.get_str(
-			|sspath| load_file_and_automake_tree(
+	) -> TreeResult<Self::Result> {
+		arg0.get_str_fn(
+			|sspath| load_file_and_automake_tree_fn(
 				sspath,
 				
 				|_| {},
@@ -84,7 +104,7 @@ impl BehMacroInclude for IncludeTt {
 					ngroup.set_span(group_span);
 					
 					return TreeResult::Ok(
-						Some(TokenTree2::Group(ngroup))
+						TokenTree2::Group(ngroup)
 					);
 				},
 				|e| TreeResult::Err(e.into_tt_err(literal_span)),
@@ -102,15 +122,25 @@ pub (crate) enum IncludeTtAndFixUnkStartToken {}
 
 impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 	type Result = TokenTree2;
-
+	
+	fn make_empty_tree(group_span: Span) -> Self::Result {
+		let mut ngroup = Group::new(
+			Delimiter::None,
+			TokenStream2::new(),
+		);
+		ngroup.set_span(group_span);
+		
+		TokenTree2::Group(ngroup)
+	}
+	
 	fn make_tree(
 		arg0: BehMacroArg0,
 		
 		group_span: Span,
 		literal_span: Span,
-	) -> TreeResult<Option<Self::Result>> {
-		arg0.get_str(
-			|sspath| load_file_and_automake_tree(
+	) -> TreeResult<Self::Result> {
+		arg0.get_str_fn(
+			|sspath| load_file_and_automake_tree_fn(
 				sspath,
 				
 				|p_string| { /*fix unk start token*/
@@ -177,7 +207,7 @@ impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 					ngroup.set_span(group_span);
 					
 					return TreeResult::Ok(
-						Some(TokenTree2::Group(ngroup))
+						TokenTree2::Group(ngroup)
 					);
 				},
 				|e| TreeResult::Err(e.into_tt_err(literal_span)),
@@ -194,30 +224,34 @@ pub (crate) enum IncludeStr {}
 impl BehMacroInclude for IncludeStr {
 	type Result = TokenTree2;
 
+	fn make_empty_tree(group_span: Span) -> Self::Result {
+		let mut lit = Literal::string("");
+		lit.set_span(group_span);
+		
+		TokenTree2::Literal(lit)
+	}
+	
 	fn make_tree(
 		arg0: BehMacroArg0,
 		
 		group_span: Span, 
 		literal_span: Span
-	) -> TreeResult<Option<Self::Result>> {
-		arg0.get_str(
+	) -> TreeResult<Self::Result> {
+		arg0.get_str_fn(
 			|sspath| {
 				let data = match std::fs::read_to_string(sspath) {
 					Ok(a) => a,
-					Err(e) => return LoadFileAndAutoMakeTreeErr::ReadToString {
-						err: e,
-						path: sspath
-					}
-					.into_tt_err(literal_span)
-					.into(),
+					Err(e) => return LoadFileAndAutoMakeTreeErr::read_to_string(e, sspath)
+						.into_tt_err(literal_span)
+						.into(),
 				};
 				
 				let mut lit = Literal::string(&data);
 				lit.set_span(group_span);
 				
-				return TreeResult::Ok(
-					Some(TokenTree2::Literal(lit))
-				);
+				TreeResult::Ok(
+					TokenTree2::Literal(lit)
+				)
 			},
 			|e| TreeResult::Err(e.into_tt_err(literal_span)),
 		)
@@ -231,33 +265,34 @@ pub (crate) enum IncludeArr {}
 impl BehMacroInclude for IncludeArr {
 	type Result = TokenTree2;
 
+	fn make_empty_tree(group_span: Span) -> Self::Result {
+		let mut lit = Literal::byte_string(&[]);
+		lit.set_span(group_span);
+		
+		TokenTree2::Literal(lit)
+	}
+	
 	fn make_tree(
 		arg0: BehMacroArg0,
 		
 		group_span: Span, 
 		literal_span: Span
-	) -> TreeResult<Option<Self::Result>> {
-		arg0.get_str(
+	) -> TreeResult<Self::Result> {
+		arg0.get_str_fn(
 			|sspath| {
 				let vec = {
 					let mut file = match File::open(sspath) {
 						Ok(a) => a,
-						Err(e) => return LoadFileAndAutoMakeTreeErr::ReadToString {
-							err: e,
-							path: sspath
-						}
-						.into_tt_err(literal_span)
-						.into(),
+						Err(e) => return LoadFileAndAutoMakeTreeErr::read_to_string(e, sspath)
+							.into_tt_err(literal_span)
+							.into(),
 					};
 					
 					let mut vec = Vec::new(); // capacity is not required.
 					if let Err(e) = file.read_to_end(&mut vec) {
-						return LoadFileAndAutoMakeTreeErr::ReadToString {
-							err: e,
-							path: sspath
-						}
-						.into_tt_err(literal_span)
-						.into();
+						return LoadFileAndAutoMakeTreeErr::read_to_string(e, sspath)
+							.into_tt_err(literal_span)
+							.into();
 					};
 					
 					vec
@@ -267,7 +302,7 @@ impl BehMacroInclude for IncludeArr {
 				lit.set_span(group_span);
 				
 				return TreeResult::Ok(
-					Some(TokenTree2::Literal(lit))
+					TokenTree2::Literal(lit)
 				);
 			},
 			|e| TreeResult::Err(e.into_tt_err(literal_span)),
@@ -278,7 +313,7 @@ impl BehMacroInclude for IncludeArr {
 /// Build macro `include`/`include_str`/`include_arr`.
 pub fn macro_rule_include<A>(
 	group: &'_ Group,
-) -> TreeResult<Option<A::Result>> where A: BehMacroInclude {
+) -> TreeResult<A::Result> where A: BehMacroInclude {
 	let stream0 = {
 		let all_streams = group.stream();
 		let mut iter = all_streams.into_iter();
@@ -294,12 +329,12 @@ pub fn macro_rule_include<A>(
 	};
 	
 	match stream0 {
-		None => TreeResult::Ok(None),
+		None => TreeResult::Ok( A::make_empty_tree(group.span()) ),
 		Some(TokenTree2::Group(g_stream)) => {
 			// The path is a group of TokenTrees that can be converted to 
 			// a string and concatenated.
 			
-			match ttry!(g_stringify(&g_stream)) {
+			match ttry!( g_stringify(&g_stream) ) {
 				Some(stringify) =>  A::make_tree(
 					// The value is already ready to be used as a path.
 					BehMacroArg0::Stringify(stringify),
@@ -307,7 +342,7 @@ pub fn macro_rule_include<A>(
 					group.span(),
 					g_stream.span()
 				),
-				None => TreeResult::Ok(None),
+				None => TreeResult::Ok( A::make_empty_tree(group.span()) ),
 			}
 		},
 		Some(TokenTree2::Literal(literal)) => { 

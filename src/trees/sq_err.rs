@@ -11,7 +11,7 @@ macro_rules! sg_err {
 	
 	// break macro `compile_error!` with a concatenator.
 	[ break $($tt:tt)* ] => {
-		break $($bi)? sg_err! {
+		break sg_err! {
 			$($tt)*
 		}
 	};

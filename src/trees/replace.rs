@@ -2,6 +2,10 @@
 use std::slice::IterMut;
 use proc_macro2::{Group, TokenTree as TokenTree2, TokenStream as TokenStream2};
 
+/*
+	TODO, At the moment this is not optimally done :(.
+*/
+
 /// A small function that provides the ability 
 /// to iterate and replace trees in place.
 pub fn support_replace_tree_in_group<R>(
@@ -13,14 +17,13 @@ pub fn support_replace_tree_in_group<R>(
 	let delimeter = real_group.delimiter();
 	
 	let mut allts: Vec<TokenTree2> = 
-		std::mem::replace(
-			&mut real_group.stream(),
-			Default::default()
-		)
+		real_group.stream()
 		.into_iter()
 		.collect();
 	
-	let result = next(allts.iter_mut());
+	let result = next(
+		allts.iter_mut()
+	);
 	
 	let mut ngroup = Group::new(
 		delimeter,
@@ -46,7 +49,9 @@ pub fn support_replace_tree_in_stream<R>(
 		.into_iter()
 		.collect();
 	
-	let result = next(allts.iter_mut());
+	let result = next(
+		allts.iter_mut()
+	);
 	
 	*stream = TokenStream2::from_iter(allts.into_iter());
 	result
