@@ -115,14 +115,16 @@ pub (crate) mod macros {
 fn search_include_and_replacegroup(
 	iter: &mut IterMut<'_, TokenTree2>,
 ) -> SearchGroup {
-	while let Some(m_punct) = iter.next() {
+	'sbegin: while let Some(m_punct) = iter.next() {
 		match m_punct {
 			TokenTree2::Punct(punct) => {
 				if punct.as_char() == '#' {
 					if let Some(m_ident) = iter.next() {
 						if let TokenTree2::Ident(ident) = m_ident {
 							let macro_fn = {
-								match ident.to_string().as_str() {
+								let str_ident = ident.to_string();
+								
+								match str_ident.as_str() {
 									"include" | "include_tt" => macro_rule_include::<IncludeTt>,
 									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => macro_rule_include::<IncludeTtAndFixUnkStartToken>,
 									
@@ -148,11 +150,17 @@ fn search_include_and_replacegroup(
 												*m_punct = nulltt.clone();
 												*m_punct2 = nulltt.clone();
 												*m_group = result;
+												
+												continue 'sbegin;
 											}
 										}
 									}
 									// autoskip
 								}
+							}
+							
+							sg_err! {
+								return [ident.span()]: "Unknown macro, expected `include(...)`, `include_tt(...)`, `include_and_fix_unknown_start_token(...)`, `include_tt_and_fix_unknown_start_token(...)`, `include_str(...)`, `include_arr(...)`"
 							}
 						}
 					}
@@ -164,7 +172,7 @@ fn search_include_and_replacegroup(
 				group,
 				|mut iter| search_include_and_replacegroup(&mut iter),
 			) {
-				SearchGroup::Break => continue,
+				SearchGroup::Break => continue 'sbegin,
 				result @ SearchGroup::Error(..) => return result,
 			},
 			_ => {},

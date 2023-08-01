@@ -65,7 +65,7 @@ impl BehMacroArg0 {
 
 /// Easily include trees from a file in your 
 /// final custom macro code.
-pub (crate) enum IncludeTt {}
+pub enum IncludeTt {}
 
 impl BehMacroInclude for IncludeTt {
 	type Result = TokenTree2;
@@ -90,7 +90,7 @@ impl BehMacroInclude for IncludeTt {
 			|sspath| load_file_and_automake_tree_fn(
 				sspath,
 				
-				|_| {},
+				|_| {}, /* skip_prepare */
 				|fs_tt| {
 					let ett = match fs_tt {
 						Some(a) => TokenStream2::from_iter(a.into_iter()),
@@ -118,7 +118,7 @@ impl BehMacroInclude for IncludeTt {
 /// invalid tokens breaking the parser.
 ///
 /// (Implemented specifically for C-like languages using `\` as a line code string)
-pub (crate) enum IncludeTtAndFixUnkStartToken {}
+pub enum IncludeTtAndFixUnkStartToken {}
 
 impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 	type Result = TokenTree2;
@@ -219,7 +219,7 @@ impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 
 /// Includes the entire file as a single line, 
 /// similar to 'include_str'.
-pub (crate) enum IncludeStr {}
+pub enum IncludeStr {}
 
 impl BehMacroInclude for IncludeStr {
 	type Result = TokenTree2;
@@ -260,7 +260,7 @@ impl BehMacroInclude for IncludeStr {
 
 /// Includes the entire file as a binary array, 
 /// similar to 'include_str'.
-pub (crate) enum IncludeArr {}
+pub enum IncludeArr {}
 
 impl BehMacroInclude for IncludeArr {
 	type Result = TokenTree2;
