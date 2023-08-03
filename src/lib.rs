@@ -131,6 +131,30 @@ fn search_include_and_replacegroup(
 									"include_str" => Some(macro_rule_include::<IncludeStr>),
 									"include_arr" => Some(macro_rule_include::<IncludeArr>),
 									
+									"break_search_macro" => {
+										/*
+											Stop indexing after the given keyword. This saves resources.
+										*/
+										
+										if let Some(m_punct2) = iter.next() {
+											if let TokenTree2::Punct(punct2) = m_punct2 {
+												if punct2.as_char() == ';' {
+													let nulltt = make_null_ttree();
+												
+													*m_ident = nulltt.clone();
+													*m_punct = nulltt.clone();
+													*m_punct2 = nulltt;
+													
+													return SearchGroup::Break;
+												}
+											}
+										}
+										
+										sg_err! {
+											return [ident.span()]: "`;` was expected."
+										}
+									},
+									
 									_ => None,
 								}
 							};
