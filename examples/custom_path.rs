@@ -15,7 +15,6 @@ macro_rules! __test_custom_path {
 	};
 }
 
-
 fn main() {
 	__test_custom_path! {
 		@ttest(T): [for_examples / "full" . t 't'];

@@ -1,5 +1,5 @@
 
-use include_tt::*;
+use include_tt::include_tt;
 
 macro_rules! test_rules {
 	[

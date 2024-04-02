@@ -1,6 +1,6 @@
 
 use std::fmt::Write;
-use include_tt::*;
+use include_tt::include_tt;
 
 macro_rules! test2_rules {
 	[

@@ -52,6 +52,7 @@ impl BehMacroArg0 {
 					a, 
 					|a| {
 						let result = next(&a);
+						#[allow(dropping_references)]
 						drop(a);
 						
 						result
