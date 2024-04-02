@@ -14,5 +14,12 @@ fn test_empty_tt() {
 		stringify!(#include!("./tests/empty.tt"))
 	};
 	
-	assert_eq!(str, "# include! (\"./tests/empty.tt\")");
+	assert_eq!(
+		str,
+		"#include!(\"./tests/empty.tt\")"
+	);
+	assert_eq!(
+		stringify!(#include!("./tests/empty.tt")),
+		"#include!(\"./tests/empty.tt\")"
+	);
 }
