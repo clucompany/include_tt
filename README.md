@@ -52,7 +52,6 @@ use include_tt::include_tt;
 use std::fmt::Write;
 
 // Example demonstrating the usage of include_tt! macro for embedding content from files.
-
 { 
 	// Embedding trees from a file in an arbitrary place of other macros.
 	let a = 10;
