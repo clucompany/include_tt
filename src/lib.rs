@@ -35,15 +35,20 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-/*! Macro for including trees, strings, arrays from files. 
+/*! Macro for embedding (trees, strings, arrays) into macro trees directly from files.
 ```rust
 use include_tt::include_tt;
 use std::fmt::Write;
 
-{ // Embedding compiler trees from a file in an arbitrary place of other macros.
+// Example demonstrating the usage of include_tt! macro for embedding content from files.
+
+{ 
+	// Embedding trees from a file in an arbitrary place of other macros.
 	let a = 10;
 	let b = 20;
 	let mut end_str = String::new();
+	
+	// Using include_tt! to embed content into a macro.
 	include_tt! {
 		let _e = write!(
 			&mut end_str,
@@ -54,29 +59,36 @@ use std::fmt::Write;
 			#include!("./for_examples/full.tt")
 		);
 	}
+	
+	// Asserting the result matches the expected output.
 	assert_eq!(end_str, "arg1: 10, arg2: 20");
 }
 
-{ // Loading a string from a file.
+{ 
+	// Loading a string from "full.tt" using include_tt! macro.
 	let str = include_tt!(
 		#include_str!("./for_examples/full.tt")
 	);
+	
+	// Asserting the result matches the expected output.
 	assert_eq!(str, "a, b");
 }
 
-{ // Loading an array from a file.
+{
+	// Loading a array from "full.tt" using include_tt! macro.
 	let array: &'static [u8; 4] = include_tt!(
 		#include_arr!("./for_examples/full.tt")
 	);
+	
+	// Asserting the result matches the expected output.
 	assert_eq!(array, b"a, b");
 }
 ```
 */
 
 use std::slice::IterMut;
-use proc_macro2::{TokenTree as TokenTree2, Group};
+use proc_macro2::{TokenTree as TokenTree2, TokenStream as TokenStream2, Group};
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
 use trees::sg_err;
 use crate::{trees::{null::make_null_ttree, replace::{support_replace_tree_in_group, support_replace_tree_in_stream}, result::TreeResult, ttry, search::SearchGroup}, macros::include::{macro_rule_include, IncludeTt, IncludeStr, IncludeArr, IncludeTtAndFixUnkStartToken}};
 
@@ -167,7 +179,7 @@ fn search_include_and_replacegroup(
 												let macro_fn = match macro_fn {
 													Some(a) => a,
 													None => sg_err! {
-														return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`"
+														return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`."
 													}
 												};
 												
@@ -190,7 +202,7 @@ fn search_include_and_replacegroup(
 							
 							if macro_fn.is_some() { // The required macro was defined earlier, which means an error.
 								sg_err! {
-									return [ident.span()]: "Unknown macro, expected `include(...)`, `include_tt(...)`, `include_and_fix_unknown_start_token(...)`, `include_tt_and_fix_unknown_start_token(...)`, `include_str(...)`, `include_arr(...)`"
+									return [ident.span()]: "Unknown macro, expected `include(...)`, `include_tt(...)`, `include_and_fix_unknown_start_token(...)`, `include_tt_and_fix_unknown_start_token(...)`, `include_str(...)`, `include_arr(...)`."
 								}
 							}
 						}
