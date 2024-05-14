@@ -1,4 +1,3 @@
-
 use include_tt::include_tt;
 
 #[test]
@@ -12,7 +11,7 @@ fn test_empty_tt() {
 		let str = #include_str!("./tests/empty.tt");
 		// File contains: ``
 		let arr = #include_arr!("./tests/empty.tt");
-		
+
 		// empty path
 		let tt2 = concat!(
 			#include!() "Empty"
@@ -22,13 +21,13 @@ fn test_empty_tt() {
 		// empty path
 		let arr2 = #include_arr!();
 	}
-	
+
 	assert_eq!(tt, "Empty");
 	assert_eq!(tt2, "Empty");
-	
+
 	assert_eq!(str, "");
 	assert_eq!(str2, "");
-	
+
 	assert_eq!(arr, &[]);
 	assert_eq!(arr2, &[]);
 }

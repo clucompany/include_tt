@@ -50,24 +50,24 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 
 #[allow(dead_code)]
 /// Load the file and present it as a compiler tree set.
-pub fn load_file_and_automake_tree<'a, R>(
-	path: &'a str,
+pub fn load_file_and_automake_tree(
+	path: &str,
 	
 	// Preprocessing a file loaded into a String before passing it directly to the parser.
 	//
 	// (If this is not required, it is enough to leave the closure empty.)
 	prepare_file_str: impl FnOnce(&mut String),
-) -> Result<Option<TokenStream2>, LoadFileAndAutoMakeTreeErr<'a>> {
-	load_file_and_automake_tree_fn(
+) -> Result<Option<TokenStream2>, LoadFileAndAutoMakeTreeErr> {
+	load_file_and_automake_tree_with_fns(
 		path,
 		prepare_file_str,
-		|a| Ok(a),
-		|e| Err(e),
+		Ok,
+		Err,
 	)
 }
 
 /// Load the file and present it as a compiler tree set.
-pub fn load_file_and_automake_tree_fn<'a, R>(
+pub fn load_file_and_automake_tree_with_fns<'a, R>(
 	path: &'a str,
 	
 	// Preprocessing a file loaded into a String before passing it directly to the parser.

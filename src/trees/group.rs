@@ -1,7 +1,7 @@
 
 use std::slice::IterMut;
 use proc_macro2::{Group, Delimiter, TokenTree as TokenTree2};
-use crate::{TreeResult, trees::{sg_err, ttry}, exprs::literal::ExprLit};
+use crate::{TreeResult, trees::sg_err, trees::ttry, exprs::literal::ExprLit};
 use std::fmt::Write;
 
 /// This function allows you to correctly end a group with 
@@ -24,7 +24,7 @@ pub fn check_correct_endgroup<'i>(
 			if let Err(..) = write!(str, "`{}`", a) {
 				return str;
 			}
-			while let Some(a) = iter.next() {
+			for a in iter {
 				if let Err(..) = write!(str, ", `{}`", a) {
 					return str;
 				}
@@ -130,9 +130,9 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 			}
 		},
 		TokenTree2::Literal(l) => {
-			return ExprLit::try_new_fn(
+			return ExprLit::try_new_with_fns(
 				&l.to_string(),
-				|sspath| match w.write_str(&sspath) {
+				|sspath| match w.write_str(sspath) {
 					Ok(..) => TreeResult::Ok(()),
 					Err(e) => {
 						let debug = format!("{:?}", e);

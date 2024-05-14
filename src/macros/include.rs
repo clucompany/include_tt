@@ -1,7 +1,7 @@
 
 use std::{io::Read, fs::File};
 use proc_macro2::{TokenTree as TokenTree2, Group, TokenStream as TokenStream2, Delimiter, Span, Literal};
-use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree_fn, LoadFileAndAutoMakeTreeErr}, ttry, group::g_stringify}, exprs::literal::{ExprLit, ExprLitTryNewErr}};
+use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree_with_fns, LoadFileAndAutoMakeTreeErr}, ttry, group::g_stringify}, exprs::literal::{ExprLit, ExprLitTryNewErr}};
 
 /// A trait that specifies the final behavior for the `include` macro.
 pub trait BehMacroInclude {
@@ -39,19 +39,19 @@ impl BehMacroArg0 {
 	/// Get a data string without special characters, 
 	/// with final escaping (if required).
 	#[inline]
-	pub fn get_str_fn<R>(
+	pub fn get_str_with_fns<R>(
 		&self,
 		
 		next: impl FnOnce(&'_ str) -> R, 
 		err: impl FnOnce(ExprLitTryNewErr) -> R
 	) -> R {
 		match self {
-			Self::Stringify(a) => next(&a),
+			Self::Stringify(a) => next(a),
 			Self::ExpMakeExprLit(a) => {
-				ExprLit::try_new_fn(
+				ExprLit::try_new_with_fns(
 					a, 
 					|a| {
-						let result = next(&a);
+						let result = next(a);
 						#[allow(dropping_references)]
 						drop(a);
 						
@@ -66,9 +66,9 @@ impl BehMacroArg0 {
 
 /// Easily include trees from a file in your 
 /// final custom macro code.
-pub enum IncludeTt {}
+pub enum IncludeTT {}
 
-impl BehMacroInclude for IncludeTt {
+impl BehMacroInclude for IncludeTT {
 	type Result = TokenTree2;
 	
 	fn make_empty_tree(group_span: Span) -> Self::Result {
@@ -87,14 +87,14 @@ impl BehMacroInclude for IncludeTt {
 		group_span: Span,
 		literal_span: Span,
 	) -> TreeResult<Self::Result> {
-		arg0.get_str_fn(
-			|sspath| load_file_and_automake_tree_fn(
+		arg0.get_str_with_fns(
+			|sspath| load_file_and_automake_tree_with_fns(
 				sspath,
 				
 				|_| {}, /* skip_prepare */
 				|fs_tt| {
 					let ett = match fs_tt {
-						Some(a) => TokenStream2::from_iter(a.into_iter()),
+						Some(a) => TokenStream2::from_iter(a),
 						None => TokenStream2::new(),
 					};
 					
@@ -119,9 +119,9 @@ impl BehMacroInclude for IncludeTt {
 /// invalid tokens breaking the parser.
 ///
 /// (Implemented specifically for C-like languages using `\` as a line code string)
-pub enum IncludeTtAndFixUnkStartToken {}
+pub enum IncludeTTAndFixUnkStartToken {}
 
-impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
+impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
 	type Result = TokenTree2;
 	
 	fn make_empty_tree(group_span: Span) -> Self::Result {
@@ -140,15 +140,15 @@ impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 		group_span: Span,
 		literal_span: Span,
 	) -> TreeResult<Self::Result> {
-		arg0.get_str_fn(
-			|sspath| load_file_and_automake_tree_fn(
+		arg0.get_str_with_fns(
+			|sspath| load_file_and_automake_tree_with_fns(
 				sspath,
 				
 				|p_string| { /*fix unk start token*/
 					let mut p_str = p_string.as_mut();
 					while let Some(pos) = p_str.find('\\' /* one symb */) {
 						let right = unsafe {
-							debug_assert_eq!(p_str.get(pos..).is_some(), true);
+							debug_assert!(p_str.get(pos..).is_some());
 							
 							p_str.get_unchecked_mut(pos..)
 						};
@@ -159,8 +159,11 @@ impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 								c_symbol.as_bytes_mut()
 							};
 							debug_assert_eq!(c_array.len(), 2);
-							debug_assert_eq!(c_array.get(0), Some(&b'\\'));
-							debug_assert_eq!(c_array.get(1).is_some(), true);
+							debug_assert_eq!({
+								#[allow(clippy::get_first)] // why?, this is done to be completely analogous to an unsafe function.
+								c_array.get(0)
+							}, Some(&b'\\'));
+							debug_assert!(c_array.get(1).is_some());
 							
 							match unsafe { c_array.get_unchecked(1) } {
 								b'\n' | b'\t' | b'\r' | b' ' => {
@@ -197,7 +200,7 @@ impl BehMacroInclude for IncludeTtAndFixUnkStartToken {
 				},
 				|fs_tt| {
 					let ett = match fs_tt {
-						Some(a) => TokenStream2::from_iter(a.into_iter()),
+						Some(a) => TokenStream2::from_iter(a),
 						None => TokenStream2::new(),
 					};
 					
@@ -238,7 +241,7 @@ impl BehMacroInclude for IncludeStr {
 		group_span: Span, 
 		literal_span: Span
 	) -> TreeResult<Self::Result> {
-		arg0.get_str_fn(
+		arg0.get_str_with_fns(
 			|sspath| {
 				let data = match std::fs::read_to_string(sspath) {
 					Ok(a) => a,
@@ -279,7 +282,7 @@ impl BehMacroInclude for IncludeArr {
 		group_span: Span, 
 		literal_span: Span
 	) -> TreeResult<Self::Result> {
-		arg0.get_str_fn(
+		arg0.get_str_with_fns(
 			|sspath| {
 				let vec = {
 					let mut file = match File::open(sspath) {

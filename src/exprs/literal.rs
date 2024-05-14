@@ -1,5 +1,5 @@
 
-use std::{ops::Deref, fmt::{Debug, Display}, borrow::{Cow, Borrow}};
+use std::{ops::Deref, fmt::{Debug, Display}, borrow::Borrow};
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use crate::sg_err;
 
@@ -94,7 +94,7 @@ impl Borrow<ExprLit> for String {
 impl ExprLit {
 	/// Creating `ExprLit` without clipping.
 	#[inline]
-	const fn __new<'a>(a: &'a str) -> &'a ExprLit {
+	const fn __new(a: &str) -> &ExprLit {
 		// It is safe, there is no other way than to "transmute", "box" 
 		// to create a dimensionless structure.
 		unsafe { &*(a as *const _ as *const ExprLit) }
@@ -109,16 +109,16 @@ impl ExprLit {
 	/// Create an `ExprLit` from the expression `"test"` and return it.
 	#[allow(dead_code)]
 	#[inline]
-	pub fn try_new<'a>(a: &'a str) -> Result<&'a ExprLit, ExprLitTryNewErr> {
-		Self::try_new_fn(
+	pub fn try_new(a: &str) -> Result<&ExprLit, ExprLitTryNewErr> {
+		Self::try_new_with_fns(
 			a,
-			|ok| Ok(ok),
-			|e| Err(e)
+			Ok,
+			Err
 		)
 	}
 	
 	/// Create an `ExprLit` from the expression `"test"` and return it.
-	pub fn try_new_fn<'a, R>(a: &'a str, next: impl FnOnce(&'a ExprLit) -> R, err: impl FnOnce(ExprLitTryNewErr) -> R) -> R {
+	pub fn try_new_with_fns<'a, R>(a: &'a str, next: impl FnOnce(&'a ExprLit) -> R, err: impl FnOnce(ExprLitTryNewErr) -> R) -> R {
 		let a_array = a.as_bytes();
 		
 		let len = a_array.len();
@@ -128,9 +128,14 @@ impl ExprLit {
 				exp: 2,
 			});
 		}
-		
-		debug_assert_eq!(a_array.get(0).is_some(), true);
-		debug_assert_eq!(a_array.get(len -1).is_some(), true);
+		debug_assert!({
+			#[allow(clippy::get_first)] // why?, this is done to be completely analogous to an unsafe function.
+			a_array.get(0).is_some()
+		});
+		debug_assert!({
+			#[allow(clippy::get_first)] // why?, this is done to be completely analogous to an unsafe function.
+			a_array.get(len -1).is_some()
+		});
 		/*
 			This is safe, the extra necessary checks are done in a separate `if` above.
 		*/
@@ -153,7 +158,7 @@ impl ExprLit {
 		}
 		
 		next({
-			debug_assert_eq!(a.get(1..len-1).is_some(), true);
+			debug_assert!(a.get(1..len-1).is_some());
 			
 			// It's safe, checks are done above (above `debug_assert`).
 			let str = unsafe {
@@ -161,59 +166,6 @@ impl ExprLit {
 			};
 			Self::__new(str)
 		})
-	}
-	
-	/// Create an `ExprLit` from the expression `"test"` and return it.
-	#[inline]
-	#[deprecated(since="1.0.2", note="please use `try_new` instead")]
-	pub fn try_new_search_and_autoreplaceshielding<'a>(a: &'a str) -> Result<Cow<'a, ExprLit>, ExprLitTryNewErr> {
-		#[allow(deprecated)]
-		Self::try_new_search_and_autoreplaceshielding_fn(
-			a, 
-			|a| Ok(a),
-			|e| Err(e),
-		)
-	}
-	
-	/// Create an `ExprLit` from the expression `"test"` and return it.
-	#[deprecated(since="1.0.2", note="please use `try_new_fn` instead")]
-	pub fn try_new_search_and_autoreplaceshielding_fn<'a, R>(a: &'a str, next: impl FnOnce(Cow<'a, ExprLit>) -> R, err: impl FnOnce(ExprLitTryNewErr) -> R) -> R {
-		Self::try_new_fn(
-			a, 
-			|exprlit| match a.find('\\') {
-				None => next(Cow::Borrowed(exprlit)),
-				Some(pos) => {
-					let mut result = String::with_capacity(a.len());
-					
-					let all_str = match pos {
-						0 => exprlit.as_str(),
-						pos => {
-							let (push_str, all_str) = exprlit.split_at(pos-1);
-							result.push_str(push_str);
-							
-							all_str
-						},
-					};
-					
-					let mut iter = all_str.chars();
-					while let Some(asymb) = iter.next() {
-						if asymb == '\\' {
-							match iter.next() {
-								Some(asymb) => result.push(asymb),
-								None => break,
-							}
-							
-							continue;
-						}
-						
-						result.push(asymb);
-					}
-					
-					next(Cow::Owned(result))
-				},
-			},
-			|e| err(e)
-		)
 	}
 	
 	#[inline(always)]
@@ -235,7 +187,6 @@ fn test_literal() {
 	/*
 		Checking the correct operation of ExprLit.
 	*/
-	
 	assert_eq!(
 		ExprLit::try_new(""),
 		Err(ExprLitTryNewErr::ExpLen { current: 0, exp: 2 })

@@ -27,7 +27,7 @@ pub fn support_replace_tree_in_group<R>(
 	
 	let mut ngroup = Group::new(
 		delimeter,
-		TokenStream2::from_iter(allts.into_iter())
+		TokenStream2::from_iter(allts)
 	);
 	ngroup.set_span(span);
 	*real_group = ngroup;
@@ -45,7 +45,7 @@ pub fn support_replace_tree_in_stream<R>(
 	next: impl FnOnce(IterMut<TokenTree2>) -> R
 ) -> R {
 	let mut allts: Vec<TokenTree2> = 
-		std::mem::replace(stream, Default::default())
+		std::mem::take(stream)
 		.into_iter()
 		.collect();
 	
@@ -53,6 +53,6 @@ pub fn support_replace_tree_in_stream<R>(
 		allts.iter_mut()
 	);
 	
-	*stream = TokenStream2::from_iter(allts.into_iter());
+	*stream = TokenStream2::from_iter(allts);
 	result
 }

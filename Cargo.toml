@@ -1,6 +1,6 @@
 [package]
 name = "include_tt"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2021"
 authors = ["Denis Kotlyarov (Денис Котляров) <denis2005991@gmail.com>"]
 repository = "https://github.com/clucompany/include_tt.git"
@@ -16,9 +16,10 @@ categories = ["development-tools", "development-tools::build-utils"]
 proc-macro = true
 
 [dependencies]
-quote = "1.0.35"
-proc-macro2 = "1.0.79"
+quote = "1.0.36"
+proc-macro2 = "1.0.82"
 
 [dependencies.syn]
-version = "2.0.57"
-features = ["full"]
+version = "2.0.63"
+default-features = false
+features = ["parsing"]

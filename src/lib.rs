@@ -55,7 +55,7 @@ use std::fmt::Write;
 			"arg1: {}, arg2: {}",
 			
 			// This file contains `a, b`.
-			#include!("./for_examples/full.tt")
+			#include!("./for_examples/full.tt") // this file contains `a, b`.
 		);
 	}
 	
@@ -66,7 +66,7 @@ use std::fmt::Write;
 { 
 	// Loading a string from "full.tt" using include_tt! macro.
 	let str = include_tt!(
-		#include_str!("./for_examples/full.tt")
+		#include_str!("./for_examples/full.tt") // this file contains `a, b`.
 	);
 	
 	// Asserting the result matches the expected output.
@@ -76,7 +76,7 @@ use std::fmt::Write;
 {
 	// Loading a array from "full.tt" using include_tt! macro.
 	let array: &'static [u8; 4] = include_tt!(
-		#include_arr!("./for_examples/full.tt")
+		#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
 	);
 	
 	// Asserting the result matches the expected output.
@@ -85,28 +85,37 @@ use std::fmt::Write;
 ```
 */
 
+#![allow(clippy::redundant_field_names)]
+#![allow(clippy::redundant_pattern_matching)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::tabs_in_doc_comments)]
+
+extern crate proc_macro;
+
 use std::slice::IterMut;
 use proc_macro2::{TokenTree as TokenTree2, TokenStream as TokenStream2, Group};
 use proc_macro::TokenStream;
 use trees::sg_err;
-use crate::{trees::{null::make_null_ttree, replace::{support_replace_tree_in_group, support_replace_tree_in_stream}, result::TreeResult, ttry, search::SearchGroup}, macros::include::{macro_rule_include, IncludeTt, IncludeStr, IncludeArr, IncludeTtAndFixUnkStartToken}};
+use crate::{trees::{null::make_null_ttree, replace::{support_replace_tree_in_group, support_replace_tree_in_stream}, result::TreeResult, ttry, search::SearchGroup}, macros::include::{macro_rule_include, IncludeTT, IncludeStr, IncludeArr, IncludeTTAndFixUnkStartToken}};
 
 /// Components, templates, code for the search 
 /// and final construction of trees.
 pub (crate) mod trees {
-	pub (crate) mod null;
-	pub (crate) mod replace;
-	pub (crate) mod group;
-	pub (crate) mod search;
+	pub mod null;
+	pub mod replace;
+	pub mod group;
+	pub mod search;
 	
 	#[macro_use]
-	pub (crate) mod result;
+	pub mod result;
+	#[allow(clippy::single_component_path_imports)]
 	pub (crate) use ttry;
 	
 	#[macro_use]
-	pub (crate) mod sq_err;
+	pub mod sq_err;
+	#[allow(clippy::single_component_path_imports)]
 	pub (crate) use sg_err;
-	pub (crate) mod loader;
+	pub mod loader;
 }
 
 /// Separate syntactic expressions of trees.
@@ -136,8 +145,8 @@ fn search_include_and_replacegroup(
 								let str_ident = ident.to_string();
 								
 								match str_ident.as_str() {
-									"include" | "include_tt" => Some(macro_rule_include::<IncludeTt>),
-									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => Some(macro_rule_include::<IncludeTtAndFixUnkStartToken>),
+									"include" | "include_tt" => Some(macro_rule_include::<IncludeTT>),
+									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => Some(macro_rule_include::<IncludeTTAndFixUnkStartToken>),
 									
 									"include_str" => Some(macro_rule_include::<IncludeStr>),
 									"include_arr" => Some(macro_rule_include::<IncludeArr>),
@@ -146,7 +155,6 @@ fn search_include_and_replacegroup(
 										/*
 											Stop indexing after the given keyword. This saves resources.
 										*/
-										
 										if let Some(m_punct2) = iter.next() {
 											if let TokenTree2::Punct(punct2) = m_punct2 {
 												if punct2.as_char() == ';' {
@@ -242,24 +250,22 @@ fn search_include_and_replacegroup(
 ///				&mut end_str,
 ///				
 ///				"arg1: {}, arg2: {}",
-///				
-///				// This file contains `a, b`.
-///				#include!("./for_examples/full.tt")
+///				#include!("./for_examples/full.tt") // this file contains `a, b`.
 ///			);
 ///		}
 ///		assert_eq!(end_str, "arg1: 10, arg2: 20");
 ///	}
 /// 
-/// { // Loading a string from a file.
+/// {
 ///		let str = include_tt!(
-///			#include_str!("./for_examples/full.tt")
+///			#include_str!("./for_examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(str, "a, b");
 ///	}
 ///	
-///	{ // Loading an array from a file.
+///	{
 ///		let array: &'static [u8; 4] = include_tt!(
-///			#include_arr!("./for_examples/full.tt")
+///			#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(array, b"a, b");
 ///	}
