@@ -144,17 +144,22 @@ fn search_include_and_replacegroup(
 				if punct.as_char() == '#' {
 					if let Some(m_ident) = iter.next() {
 						if let TokenTree2::Ident(ident) = m_ident {
-							let macro_fn: Option<fn(&Group) -> TreeResult<TokenTree2>> = {
+							let (add_auto_break, macro_fn): (bool, fn(&Group) -> TreeResult<TokenTree2>) = {
 								let str_ident = ident.to_string();
 								
 								match str_ident.as_str() {
-									"include" | "include_tt" => Some(macro_rule_include::<IncludeTT>),
-									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => Some(macro_rule_include::<IncludeTTAndFixUnkStartToken>),
+									"include" | "include_tt" => (false, macro_rule_include::<IncludeTT>),
+									"include_and_break" | "include_tt+break" => (true, macro_rule_include::<IncludeTT>),
 									
-									"include_str" => Some(macro_rule_include::<IncludeStr>),
-									"include_arr" => Some(macro_rule_include::<IncludeArr>),
+									"include_and_fix_unknown_start_token" | "include_tt_and_fix_unknown_start_token" => (false, macro_rule_include::<IncludeTTAndFixUnkStartToken>),
+									"include_and_fix_unknown_start_token_and_break" | "include_tt_and_fix_unknown_start_token_and_break" => (true, macro_rule_include::<IncludeTTAndFixUnkStartToken>),
 									
-									"break_search_macro" => {
+									"include_str" => (false, macro_rule_include::<IncludeStr>),
+									"include_str_and_break" => (true, macro_rule_include::<IncludeStr>),
+									"include_arr" => (false, macro_rule_include::<IncludeArr>),
+									"include_arr_and_break" => (true, macro_rule_include::<IncludeArr>),
+									
+									"break" | "break_search_macro" => {
 										/*
 											Stop indexing after the given keyword. This saves resources.
 										*/
@@ -177,7 +182,9 @@ fn search_include_and_replacegroup(
 										}
 									},
 									
-									_ => None,
+									_ => sg_err! {
+										return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`, `include_and_break`, `include_tt_and_break`, `include_and_fix_unknown_start_token_and_break`, `include_tt_and_fix_unknown_start_token_and_break`, `include_str_and_break`, `include_arr_and_break`."
+									},
 								}
 							};
 							
@@ -186,13 +193,6 @@ fn search_include_and_replacegroup(
 									if punct2.as_char() == '!' {
 										if let Some(m_group) = iter.next() {
 											if let TokenTree2::Group(group) = m_group {
-												let macro_fn = match macro_fn {
-													Some(a) => a,
-													None => sg_err! {
-														return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`."
-													}
-												};
-												
 												let result = ttry!( macro_fn(group) );
 												
 												let nulltt = make_null_ttree();
@@ -202,17 +202,14 @@ fn search_include_and_replacegroup(
 												*m_punct2 = nulltt.clone();
 												*m_group = result;
 												
-												continue 'sbegin;
+												match add_auto_break {
+													false => continue 'sbegin,
+													true => return SearchGroup::Break,
+												}
 											}
 										}
 									}
 									// autoskip
-								}
-							}
-							
-							if macro_fn.is_some() { // The required macro was defined earlier, which means an error.
-								sg_err! {
-									return [ident.span()]: "Unknown macro, expected `include(...)`, `include_tt(...)`, `include_and_fix_unknown_start_token(...)`, `include_tt_and_fix_unknown_start_token(...)`, `include_str(...)`, `include_arr(...)`."
 								}
 							}
 						}

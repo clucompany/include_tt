@@ -65,14 +65,14 @@ impl Deref for ExprLit {
 impl Debug for ExprLit {
 	#[inline(always)]
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		Debug::fmt(&self as &str, f)
+		Debug::fmt(self as &str, f)
 	}
 }
 
 impl Display for ExprLit {
 	#[inline(always)]
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		Display::fmt(&self as &str, f)
+		Display::fmt(self as &str, f)
 	}
 }
 

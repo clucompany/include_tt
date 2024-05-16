@@ -8,7 +8,7 @@ fn test_empty_tt() {
 			The use of this keyword leaves the search for occurrences
 			needed for replacement.
 		*/
-		#break_search_macro;
+		#break;
 
 		stringify!(#include!("./tests/empty.tt"))
 	};
