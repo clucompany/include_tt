@@ -31,7 +31,7 @@
 </div>
 </div>
 
-## Usage:
+## Usage
 
 Add this to your Cargo.toml:
 
