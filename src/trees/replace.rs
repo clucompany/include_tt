@@ -1,6 +1,7 @@
 
-use std::slice::IterMut;
+use core::slice::IterMut;
 use proc_macro2::{Group, TokenTree as TokenTree2, TokenStream as TokenStream2};
+use alloc::vec::Vec;
 
 /*
 	TODO, At the moment this is not optimally done :(.
@@ -38,14 +39,14 @@ pub fn support_replace_tree_in_group<R>(
 /// A small function that provides the ability 
 /// to iterate and replace trees in place.
 /// 
-/// For a group, use the `replace_tree_in_group` function.
+/// For a group, use the `support_replace_tree_in_group` function.
 pub fn support_replace_tree_in_stream<R>(
 	stream: &mut TokenStream2,
 	
 	next: impl FnOnce(IterMut<TokenTree2>) -> R
 ) -> R {
 	let mut allts: Vec<TokenTree2> = 
-		std::mem::take(stream)
+		core::mem::take(stream)
 		.into_iter()
 		.collect();
 	

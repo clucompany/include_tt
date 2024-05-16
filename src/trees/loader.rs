@@ -1,4 +1,5 @@
 
+use alloc::{format, string::String};
 use proc_macro2::{TokenStream as TokenStream2, Span};
 use std::io::Error as IOError;
 use syn::Error as SynError;

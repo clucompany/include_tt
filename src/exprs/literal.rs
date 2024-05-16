@@ -1,5 +1,6 @@
 
-use std::{ops::Deref, fmt::{Debug, Display}, borrow::Borrow};
+use core::{ops::Deref, fmt::{Debug, Display}, borrow::Borrow};
+use alloc::{borrow::ToOwned, string::String};
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use crate::sg_err;
 
@@ -63,14 +64,14 @@ impl Deref for ExprLit {
 
 impl Debug for ExprLit {
 	#[inline(always)]
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		Debug::fmt(&self as &str, f)
 	}
 }
 
 impl Display for ExprLit {
 	#[inline(always)]
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		Display::fmt(&self as &str, f)
 	}
 }

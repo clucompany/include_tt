@@ -1,5 +1,6 @@
 
 use std::{io::Read, fs::File};
+use alloc::string::String;
 use proc_macro2::{TokenTree as TokenTree2, Group, TokenStream as TokenStream2, Delimiter, Span, Literal};
 use crate::{trees::{sg_err, result::TreeResult, loader::{load_file_and_automake_tree_with_fns, LoadFileAndAutoMakeTreeErr}, ttry, group::g_stringify}, exprs::literal::{ExprLit, ExprLitTryNewErr}};
 

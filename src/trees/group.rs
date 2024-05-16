@@ -1,8 +1,8 @@
 
-use std::slice::IterMut;
+use core::slice::IterMut;
 use proc_macro2::{Group, Delimiter, TokenTree as TokenTree2};
 use crate::{TreeResult, trees::sg_err, trees::ttry, exprs::literal::ExprLit};
-use std::fmt::Write;
+use alloc::{fmt::Write, format, string::{String, ToString}};
 
 /// This function allows you to correctly end a group with 
 /// a delimiter () and skip ';' if it is needed.
