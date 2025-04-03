@@ -41,7 +41,7 @@ fn main() {
 		// or
 		// a - b = n
 		test_rules! {
-			#include!("./for_examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
+			#include!("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
 		}
 	}
 	assert_eq!(n, a + b);

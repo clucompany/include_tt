@@ -20,7 +20,7 @@ fn main() {
 	// if you need to change, for example, to (b,a) or substitute constant values,
 	// we will only change the contents of the file "for_examples/full.tt"!
 	__test_custom_path! {
-		@ttest(T): [for_examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
+		@ttest(T): [examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
 	}
 	assert_eq!(ttest::T, (0, 10));
 }

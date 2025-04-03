@@ -44,17 +44,17 @@ fn main() {
 	// Loading trees from a file and substituting them into a custom macro.
 	include_tt! {
 		test2_rules! {
-			[#include!("./for_examples/full.tt")] // this file contains `a, b`.
-			[#include! { "./for_examples/full.tt"}] // this file contains `a, b`.
+			[#include!("./examples/full.tt")] // this file contains `a, b`.
+			[#include! { "./examples/full.tt"}] // this file contains `a, b`.
 		}
 		test2_rules! {
-			#include!("./for_examples/full.tt") // this file contains `a, b`.
+			#include!("./examples/full.tt") // this file contains `a, b`.
 		}
 
 		println!(
 			concat!(
 				"#",
-				#include_str!("./for_examples/full.tt"), // this file contains `a, b`.
+				#include_str!("./examples/full.tt"), // this file contains `a, b`.
 				"#"
 			)
 		);
@@ -62,14 +62,14 @@ fn main() {
 
 	{
 		// Loading a string from a file.
-		let str = include_tt!(#include_str!("./for_examples/full.tt")); // this file contains `a, b`.
+		let str = include_tt!(#include_str!("./examples/full.tt")); // this file contains `a, b`.
 		assert_eq!(str, "a, b");
 	}
 
 	{
 		// Loading an array from a file.
 		let array: &'static [u8; 4] = include_tt!(
-			#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
+			#include_arr!("./examples/full.tt") // this file contains `a, b`.
 		);
 		assert_eq!(array, b"a, b");
 	}
@@ -85,7 +85,7 @@ fn main() {
 				&mut end_str,
 
 				"arg1: {}, arg2: {}",
-				#include!("./for_examples/full.tt") // this file contains `a, b`.
+				#include!("./examples/full.tt") // this file contains `a, b`.
 			);
 		}
 		assert_eq!(end_str, "arg1: 10, arg2: 20");

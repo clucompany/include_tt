@@ -55,7 +55,7 @@ use std::fmt::Write;
 			"arg1: {}, arg2: {}",
 
 			// This file contains `a, b`.
-			#include!("./for_examples/full.tt") // this file contains `a, b`.
+			#include!("./examples/full.tt") // this file contains `a, b`.
 		);
 	}
 
@@ -66,7 +66,7 @@ use std::fmt::Write;
 {
 	// Loading a string from "full.tt" using include_tt! macro.
 	let str = include_tt!(
-		#include_str!("./for_examples/full.tt") // this file contains `a, b`.
+		#include_str!("./examples/full.tt") // this file contains `a, b`.
 	);
 
 	// Asserting the result matches the expected output.
@@ -76,7 +76,7 @@ use std::fmt::Write;
 {
 	// Loading a array from "full.tt" using include_tt! macro.
 	let array: &'static [u8; 4] = include_tt!(
-		#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
+		#include_arr!("./examples/full.tt") // this file contains `a, b`.
 	);
 
 	// Asserting the result matches the expected output.
@@ -275,7 +275,7 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 ///				&mut end_str,
 ///
 ///				"arg1: {}, arg2: {}",
-///				#include!("./for_examples/full.tt") // this file contains `a, b`.
+///				#include!("./examples/full.tt") // this file contains `a, b`.
 ///			);
 ///		}
 ///		assert_eq!(end_str, "arg1: 10, arg2: 20");
@@ -283,14 +283,14 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 ///
 /// {
 ///		let str = include_tt!(
-///			#include_str!("./for_examples/full.tt") // this file contains `a, b`.
+///			#include_str!("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(str, "a, b");
 ///	}
 ///
 ///	{
 ///		let array: &'static [u8; 4] = include_tt!(
-///			#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
+///			#include_arr!("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(array, b"a, b");
 ///	}
