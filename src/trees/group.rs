@@ -1,24 +1,27 @@
-
+use crate::{TreeResult, exprs::literal::ExprLit, trees::sg_err, trees::ttry};
+use alloc::{
+	fmt::Write,
+	format,
+	string::{String, ToString},
+};
 use core::slice::IterMut;
-use proc_macro2::{Group, Delimiter, TokenTree as TokenTree2};
-use crate::{TreeResult, trees::sg_err, trees::ttry, exprs::literal::ExprLit};
-use alloc::{fmt::Write, format, string::{String, ToString}};
+use proc_macro2::{Delimiter, Group, TokenTree as TokenTree2};
 
-/// This function allows you to correctly end a group with 
+/// This function allows you to correctly end a group with
 /// a delimiter () and skip ';' if it is needed.
 #[allow(dead_code)]
 pub fn check_correct_endgroup<'i>(
 	group: &'_ Group,
-	
+
 	iter: &mut IterMut<'i, TokenTree2>,
-	
+
 	endgroup: &[char],
 ) -> TreeResult<Option<&'i mut TokenTree2>> {
 	/// Assembly &[char] array into final string `A`, `B`, `C`
 	#[inline]
 	fn make_endroup_str(endgroup: &[char]) -> String {
 		let mut str = String::with_capacity(endgroup.len() * 3);
-		
+
 		let mut iter = endgroup.iter();
 		if let Some(a) = iter.next() {
 			if let Err(..) = write!(str, "`{}`", a) {
@@ -30,17 +33,18 @@ pub fn check_correct_endgroup<'i>(
 				}
 			}
 		}
-		
+
 		str
 	}
-	
+
 	match group.delimiter() {
-		Delimiter::Parenthesis => { /* `( ... )` */
+		Delimiter::Parenthesis => {
+			/* `( ... )` */
 			let optm_punct = iter.next();
-			
+
 			if let Some(ref m_punct) = optm_punct {
 				match m_punct {
-					TokenTree2::Punct(ref punct) => {
+					TokenTree2::Punct(punct) => {
 						let is_valid = 'is_valid: {
 							let a_punct = punct.as_char();
 							for a_endgroup in endgroup {
@@ -48,7 +52,7 @@ pub fn check_correct_endgroup<'i>(
 									break 'is_valid true;
 								}
 							}
-							
+
 							break 'is_valid false;
 						};
 						if !is_valid {
@@ -57,16 +61,16 @@ pub fn check_correct_endgroup<'i>(
 								return [punct.span()]: "", #e_group_str, " was expected."
 							}
 						}
-						
+
 						return TreeResult::Ok(optm_punct);
-					},
-					
+					}
+
 					_ => {
 						let e_group_str = make_endroup_str(endgroup);
 						sg_err! {
 							return [m_punct.span()]: "", #e_group_str, " was expected."
 						}
-					},
+					}
 				}
 			} else {
 				let e_group_str = make_endroup_str(endgroup);
@@ -74,13 +78,13 @@ pub fn check_correct_endgroup<'i>(
 					return [group.span()]: "", #e_group_str, " was expected."
 				}
 			}
-		},
+		}
 		Delimiter::Brace => return TreeResult::Ok(None), // `{ ... }`, ok
 		Delimiter::Bracket | Delimiter::None => {
 			sg_err! {
 				return [group.span()]: "Unsupported group type."
 			}
-		},
+		}
 	}
 }
 
@@ -90,15 +94,13 @@ pub fn g_stringify(group: &'_ Group) -> TreeResult<Option<String>> {
 
 	let iter = group.stream().into_iter();
 	for tt in iter {
-		ttry!(
-			__g_stringify(tt, &mut result)
-		);
+		ttry!(__g_stringify(tt, &mut result));
 	}
-	
+
 	if result.is_empty() {
 		return TreeResult::Ok(None);
 	}
-	
+
 	TreeResult::Ok(Some(result))
 }
 
@@ -112,7 +114,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 			for tt in iter {
 				ttry!(__g_stringify(tt, w));
 			}
-		},
+		}
 		TokenTree2::Ident(i) => {
 			if let Err(e) = w.write_str(&i.to_string()) {
 				let debug = format!("{:?}", e);
@@ -120,7 +122,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 					return [i.span()]: "Ident, ", #debug
 				}
 			}
-		},
+		}
 		TokenTree2::Punct(p) => {
 			if let Err(e) = w.write_char(p.as_char()) {
 				let debug = format!("{:?}", e);
@@ -128,7 +130,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 					return [p.span()]: "Punct, ", #debug
 				}
 			}
-		},
+		}
 		TokenTree2::Literal(l) => {
 			return ExprLit::try_new_with_fns(
 				&l.to_string(),
@@ -139,19 +141,19 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 						sg_err! {
 							return [l.span()]: "Literal, ", #debug
 						}
-					},
+					}
 				},
 				|e| {
 					let span = l.span();
 					let debug = e.into_tt_err(span);
-					
+
 					sg_err! {
 						return [span]: "Literal, ", #debug
 					}
 				},
-			)
-		},
+			);
+		}
 	}
-	
+
 	TreeResult::Ok(())
 }

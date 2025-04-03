@@ -1,7 +1,6 @@
-
 use proc_macro2::TokenStream as TokenStream2;
 
-/// The most common `Result`, 
+/// The most common `Result`,
 /// but with a default function to select the error, not the value.
 #[derive(Debug)]
 pub enum TreeResult<Ok> {
