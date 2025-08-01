@@ -24,11 +24,11 @@ pub fn check_correct_endgroup<'i>(
 
 		let mut iter = endgroup.iter();
 		if let Some(a) = iter.next() {
-			if let Err(..) = write!(str, "`{}`", a) {
+			if let Err(..) = write!(str, "`{a}`") {
 				return str;
 			}
 			for a in iter {
-				if let Err(..) = write!(str, ", `{}`", a) {
+				if let Err(..) = write!(str, ", `{a}`") {
 					return str;
 				}
 			}
@@ -117,7 +117,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		}
 		TokenTree2::Ident(i) => {
 			if let Err(e) = w.write_str(&i.to_string()) {
-				let debug = format!("{:?}", e);
+				let debug = format!("{e:?}");
 				sg_err! {
 					return [i.span()]: "Ident, ", #debug
 				}
@@ -125,7 +125,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		}
 		TokenTree2::Punct(p) => {
 			if let Err(e) = w.write_char(p.as_char()) {
-				let debug = format!("{:?}", e);
+				let debug = format!("{e:?}");
 				sg_err! {
 					return [p.span()]: "Punct, ", #debug
 				}
@@ -137,7 +137,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 				|sspath| match w.write_str(sspath) {
 					Ok(..) => TreeResult::Ok(()),
 					Err(e) => {
-						let debug = format!("{:?}", e);
+						let debug = format!("{e:?}");
 						sg_err! {
 							return [l.span()]: "Literal, ", #debug
 						}

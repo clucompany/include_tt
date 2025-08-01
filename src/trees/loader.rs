@@ -27,13 +27,13 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
 		match self {
 			Self::ReadToString { err, path } => {
-				let se = format!("{:?}", err);
+				let se = format!("{err:?}");
 				sg_err! {
 					[span]: "Error loading file, err: ", #se, ", path: ", #path, "."
 				}
 			}
 			Self::ParseStr(e) => {
-				let se = format!("{:?}", e);
+				let se = format!("{e:?}");
 				sg_err! {
 					[span]: "Failed to convert to tree `tt`: ", #se, "."
 				}
