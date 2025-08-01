@@ -14,14 +14,14 @@ pub struct ExprLit {
 }
 
 impl PartialEq<ExprLit> for ExprLit {
-	#[inline(always)]
+	#[inline]
 	fn eq(&self, other: &ExprLit) -> bool {
 		PartialEq::eq(self.as_str(), other.as_str())
 	}
 }
 
 impl PartialEq<str> for ExprLit {
-	#[inline(always)]
+	#[inline]
 	fn eq(&self, other: &str) -> bool {
 		PartialEq::eq(self.as_str(), other)
 	}
@@ -56,21 +56,21 @@ impl ExprLitTryNewErr {
 impl Deref for ExprLit {
 	type Target = str;
 
-	#[inline(always)]
+	#[inline]
 	fn deref(&self) -> &Self::Target {
 		self.as_str()
 	}
 }
 
 impl Debug for ExprLit {
-	#[inline(always)]
+	#[inline]
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		Debug::fmt(self as &str, f)
 	}
 }
 
 impl Display for ExprLit {
-	#[inline(always)]
+	#[inline]
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		Display::fmt(self as &str, f)
 	}
@@ -102,7 +102,7 @@ impl ExprLit {
 	}
 
 	/// Creating `ExprLit` without clipping.
-	#[inline(always)]
+	#[inline]
 	pub const unsafe fn unchecked(a: &str) -> &Self {
 		Self::__new(a)
 	}
@@ -172,14 +172,14 @@ impl ExprLit {
 		})
 	}
 
-	#[inline(always)]
+	#[inline]
 	/// Returns `true` if self has a length of zero bytes.
 	pub const fn is_empty(&self) -> bool {
 		self.data.is_empty()
 	}
 
 	/// Getting a string of actual data.
-	#[inline(always)]
+	#[inline]
 	pub const fn as_str(&self) -> &str {
 		&self.data
 	}

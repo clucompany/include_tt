@@ -17,7 +17,7 @@ pub enum LoadFileAndAutoMakeTreeErr<'a> {
 impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 	/// The error type for I/O operations of the
 	/// [Read], [Write], [Seek], and associated traits.
-	#[inline(always)]
+	#[inline]
 	pub const fn read_to_string(err: IOError, path: &'a str) -> Self {
 		Self::ReadToString { err, path }
 	}
