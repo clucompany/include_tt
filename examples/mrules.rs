@@ -45,5 +45,5 @@ fn main() {
 		}
 	}
 	assert_eq!(n, a + b);
-	println!("n: {:?}", n); // 30
+	println!("n: {n:?}"); // 30
 }

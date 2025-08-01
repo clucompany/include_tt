@@ -1,16 +1,16 @@
 /// A small macro that allows you to prepare
 /// an error tree and throw it to the user.
-macro_rules! sg_err {
+macro_rules! throw_sg_err {
 	// return macro `compile_error!`.
 	[ return $($tt:tt)* ] => {
-		return sg_err! {
+		return throw_sg_err! {
 			$($tt)*
 		}
 	};
 
 	// break macro `compile_error!` with a concatenator.
 	[ break $($tt:tt)* ] => {
-		break sg_err! {
+		break throw_sg_err! {
 			$($tt)*
 		}
 	};

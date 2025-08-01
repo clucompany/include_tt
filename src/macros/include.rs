@@ -4,14 +4,19 @@ use crate::{
 		group::g_stringify,
 		loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
 		result::TreeResult,
-		sg_err, ttry,
+		throw_sg_err, ttry,
 	},
 };
 use alloc::string::String;
 use proc_macro2::{
 	Delimiter, Group, Literal, Span, TokenStream as TokenStream2, TokenTree as TokenTree2,
 };
-use std::{fs::File, io::Read};
+use std::{
+	borrow::Cow,
+	fs::File,
+	io::Read,
+	path::Path,
+};
 
 /// A trait that specifies the final behavior for the `include` macro.
 pub trait BehMacroInclude {
@@ -92,8 +97,9 @@ impl BehMacroInclude for IncludeTT {
 	) -> TreeResult<Self::Result> {
 		arg0.get_str_with_fns(
 			|sspath| {
+				let path = Path::new(sspath);
 				load_file_and_automake_tree_with_fns(
-					sspath,
+					path,
 					|_| {}, /* skip_prepare */
 					|fs_tt| {
 						let ett = match fs_tt {
@@ -138,6 +144,7 @@ impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
 	) -> TreeResult<Self::Result> {
 		arg0.get_str_with_fns(
 			|sspath| {
+				let sspath = Path::new(sspath);
 				load_file_and_automake_tree_with_fns(
 					sspath,
 					|p_string| {
@@ -238,10 +245,14 @@ impl BehMacroInclude for IncludeStr {
 	) -> TreeResult<Self::Result> {
 		arg0.get_str_with_fns(
 			|sspath| {
-				let data = match std::fs::read_to_string(sspath) {
+				let path = Path::new(sspath);
+				let data = match std::fs::read_to_string(path) {
 					Ok(a) => a,
 					Err(e) => {
-						return LoadFileAndAutoMakeTreeErr::read_to_string(e, sspath)
+						let path = path
+							.canonicalize()
+							.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
+						return LoadFileAndAutoMakeTreeErr::read_to_string(e, path)
 							.into_tt_err(literal_span)
 							.into();
 					}
@@ -280,10 +291,14 @@ impl BehMacroInclude for IncludeArr {
 		arg0.get_str_with_fns(
 			|sspath| {
 				let vec = {
-					let mut file = match File::open(sspath) {
+					let path = Path::new(sspath);
+					let mut file = match File::open(path) {
 						Ok(a) => a,
 						Err(e) => {
-							return LoadFileAndAutoMakeTreeErr::read_to_string(e, sspath)
+							let path = path
+								.canonicalize()
+								.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
+							return LoadFileAndAutoMakeTreeErr::read_to_string(e, path)
 								.into_tt_err(literal_span)
 								.into();
 						}
@@ -291,7 +306,10 @@ impl BehMacroInclude for IncludeArr {
 
 					let mut vec = Vec::new(); // capacity is not required.
 					if let Err(e) = file.read_to_end(&mut vec) {
-						return LoadFileAndAutoMakeTreeErr::read_to_string(e, sspath)
+						let path = path
+							.canonicalize()
+							.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
+						return LoadFileAndAutoMakeTreeErr::read_to_string(e, path)
 							.into_tt_err(literal_span)
 							.into();
 					};
@@ -320,7 +338,7 @@ where
 
 		let stream0 = iter.next();
 		if let Some(unk) = iter.next() {
-			sg_err! {
+			throw_sg_err! {
 				return [unk.span()]: "Specify a valid path to the file written with `\"/Test.tt\"`, or `'T'`, or use a group of different trees `[/, \"Test\", '/']`."
 			}
 		}
@@ -355,7 +373,7 @@ where
 				literal.span(),
 			)
 		}
-		Some(g_stream) => sg_err! {
+		Some(g_stream) => throw_sg_err! {
 			return [g_stream.span()]: "The path was expected as a single string (example: \"../test.tt\") or a path formatted as separate TokenTrees (example: ['.' '.' test \".tt\"])."
 		},
 	}

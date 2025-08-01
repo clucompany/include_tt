@@ -1,4 +1,4 @@
-use crate::{TreeResult, exprs::literal::ExprLit, trees::sg_err, trees::ttry};
+use crate::{exprs::literal::ExprLit, throw_sg_err, trees::ttry, TreeResult};
 use alloc::{
 	fmt::Write,
 	format,
@@ -24,11 +24,11 @@ pub fn check_correct_endgroup<'i>(
 
 		let mut iter = endgroup.iter();
 		if let Some(a) = iter.next() {
-			if let Err(..) = write!(str, "`{}`", a) {
+			if let Err(..) = write!(str, "`{a}`") {
 				return str;
 			}
 			for a in iter {
-				if let Err(..) = write!(str, ", `{}`", a) {
+				if let Err(..) = write!(str, ", `{a}`") {
 					return str;
 				}
 			}
@@ -57,7 +57,7 @@ pub fn check_correct_endgroup<'i>(
 						};
 						if !is_valid {
 							let e_group_str = make_endroup_str(endgroup);
-							sg_err! {
+							throw_sg_err! {
 								return [punct.span()]: "", #e_group_str, " was expected."
 							}
 						}
@@ -67,21 +67,21 @@ pub fn check_correct_endgroup<'i>(
 
 					_ => {
 						let e_group_str = make_endroup_str(endgroup);
-						sg_err! {
+						throw_sg_err! {
 							return [m_punct.span()]: "", #e_group_str, " was expected."
 						}
 					}
 				}
 			} else {
 				let e_group_str = make_endroup_str(endgroup);
-				sg_err! {
+				throw_sg_err! {
 					return [group.span()]: "", #e_group_str, " was expected."
 				}
 			}
 		}
 		Delimiter::Brace => return TreeResult::Ok(None), // `{ ... }`, ok
 		Delimiter::Bracket | Delimiter::None => {
-			sg_err! {
+			throw_sg_err! {
 				return [group.span()]: "Unsupported group type."
 			}
 		}
@@ -117,16 +117,16 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		}
 		TokenTree2::Ident(i) => {
 			if let Err(e) = w.write_str(&i.to_string()) {
-				let debug = format!("{:?}", e);
-				sg_err! {
+				let debug = format!("{e:?}");
+				throw_sg_err! {
 					return [i.span()]: "Ident, ", #debug
 				}
 			}
 		}
 		TokenTree2::Punct(p) => {
 			if let Err(e) = w.write_char(p.as_char()) {
-				let debug = format!("{:?}", e);
-				sg_err! {
+				let debug = format!("{e:?}");
+				throw_sg_err! {
 					return [p.span()]: "Punct, ", #debug
 				}
 			}
@@ -137,8 +137,8 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 				|sspath| match w.write_str(sspath) {
 					Ok(..) => TreeResult::Ok(()),
 					Err(e) => {
-						let debug = format!("{:?}", e);
-						sg_err! {
+						let debug = format!("{e:?}");
+						throw_sg_err! {
 							return [l.span()]: "Literal, ", #debug
 						}
 					}
@@ -147,7 +147,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 					let span = l.span();
 					let debug = e.into_tt_err(span);
 
-					sg_err! {
+					throw_sg_err! {
 						return [span]: "Literal, ", #debug
 					}
 				},

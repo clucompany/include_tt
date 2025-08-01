@@ -12,7 +12,7 @@ pub(crate) enum SearchGroup {
 }
 
 impl From<TokenStream2> for SearchGroup {
-	#[inline(always)]
+	#[inline]
 	fn from(e: TokenStream2) -> Self {
 		Self::Error(e)
 	}

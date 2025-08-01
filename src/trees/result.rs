@@ -11,7 +11,7 @@ pub enum TreeResult<Ok> {
 }
 
 impl<T> From<TokenStream2> for TreeResult<T> {
-	#[inline(always)]
+	#[inline]
 	fn from(e: TokenStream2) -> Self {
 		Self::Err(e)
 	}
