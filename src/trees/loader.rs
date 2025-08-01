@@ -28,13 +28,13 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 			Self::ReadToString { err, path } => {
 				let spath = format!("{path:?}"); // TODO REFACTORME
 				let se = format!("{err:?}");
-				sg_err! {
+				throw_sg_err! {
 					[span]: "Error loading file, err: '", #se, "', path: ", #spath, "."
 				}
 			}
 			Self::ParseStr(e) => {
 				let se = format!("{e:?}");
-				sg_err! {
+				throw_sg_err! {
 					[span]: "Failed to convert to tree `tt`: '", #se, "'."
 				}
 			}

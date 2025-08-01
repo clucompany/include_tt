@@ -1,4 +1,4 @@
-use crate::sg_err;
+use crate::throw_sg_err;
 use alloc::{borrow::ToOwned, string::String};
 use core::{
 	borrow::Borrow,
@@ -43,10 +43,10 @@ impl ExprLitTryNewErr {
 	#[inline]
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
 		match self {
-			Self::ExpLen { current, exp } => sg_err! {
+			Self::ExpLen { current, exp } => throw_sg_err! {
 				[span]: "More char expected, current: ", #current, "exp: {}", #exp, "."
 			},
-			Self::ExpQuotes => sg_err! {
+			Self::ExpQuotes => throw_sg_err! {
 				[span]: "Double quotes were expected."
 			},
 		}

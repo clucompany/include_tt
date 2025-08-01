@@ -110,7 +110,7 @@ use alloc::string::ToString;
 use core::slice::IterMut;
 use proc_macro::TokenStream;
 use proc_macro2::{Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
-use trees::sg_err;
+use crate::trees::throw_sg_err;
 
 /// Components, templates, code for the search
 /// and final construction of trees.
@@ -128,7 +128,7 @@ pub(crate) mod trees {
 	#[macro_use]
 	pub mod sq_err;
 	#[allow(clippy::single_component_path_imports)]
-	pub(crate) use sg_err;
+	pub(crate) use throw_sg_err;
 	pub mod loader;
 }
 
@@ -203,12 +203,12 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 											}
 										}
 
-										sg_err! {
+										throw_sg_err! {
 											return [ident.span()]: "`;` was expected."
 										}
 									}
 
-									_ => sg_err! {
+									_ => throw_sg_err! {
 										return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`, `include_and_break`, `include_tt_and_break`, `include_and_fix_unknown_start_token_and_break`, `include_tt_and_fix_unknown_start_token_and_break`, `include_str_and_break`, `include_arr_and_break`."
 									},
 								}

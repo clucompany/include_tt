@@ -4,7 +4,7 @@ use crate::{
 		group::g_stringify,
 		loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
 		result::TreeResult,
-		sg_err, ttry,
+		throw_sg_err, ttry,
 	},
 };
 use alloc::string::String;
@@ -338,7 +338,7 @@ where
 
 		let stream0 = iter.next();
 		if let Some(unk) = iter.next() {
-			sg_err! {
+			throw_sg_err! {
 				return [unk.span()]: "Specify a valid path to the file written with `\"/Test.tt\"`, or `'T'`, or use a group of different trees `[/, \"Test\", '/']`."
 			}
 		}
@@ -373,7 +373,7 @@ where
 				literal.span(),
 			)
 		}
-		Some(g_stream) => sg_err! {
+		Some(g_stream) => throw_sg_err! {
 			return [g_stream.span()]: "The path was expected as a single string (example: \"../test.tt\") or a path formatted as separate TokenTrees (example: ['.' '.' test \".tt\"])."
 		},
 	}
