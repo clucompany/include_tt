@@ -93,7 +93,7 @@ extern crate proc_macro;
 
 use crate::trees::throw_sg_err;
 use crate::{
-	macros::include::{
+	include::{
 		IncludeArr, IncludeStr, IncludeTT, IncludeTTAndFixUnkStartToken, macro_rule_include,
 	},
 	trees::{
@@ -134,9 +134,7 @@ pub(crate) mod exprs {
 }
 
 /// Code component of macros.
-pub(crate) mod macros {
-	pub mod include;
-}
+pub(crate) mod include;
 
 /// The task of the function is to find a group with the desired macro
 /// and perform useful work specific to the selected macro.
