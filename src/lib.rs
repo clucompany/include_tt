@@ -101,7 +101,7 @@ use crate::{
 		replace::{support_replace_tree_in_group, support_replace_tree_in_stream},
 		result::TreeResult,
 		search::SearchGroup,
-		ttry,
+		tq,
 	},
 };
 use core::slice::IterMut;
@@ -119,7 +119,7 @@ pub(crate) mod trees {
 	#[macro_use]
 	pub mod result;
 	#[allow(clippy::single_component_path_imports)]
-	pub(crate) use ttry;
+	pub(crate) use tq;
 
 	#[macro_use]
 	pub mod sq_err;
@@ -227,7 +227,7 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 									if punct2.as_char() == '!' {
 										if let Some(m_group) = iter.next() {
 											if let TokenTree2::Group(group) = m_group {
-												let result = ttry!(macro_fn(group));
+												let result = tq!(macro_fn(group));
 
 												let nulltt = make_null_ttree();
 

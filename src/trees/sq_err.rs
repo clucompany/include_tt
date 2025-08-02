@@ -1,5 +1,5 @@
-/// A small macro that allows you to prepare
-/// an error tree and throw it to the user.
+/// A small macro that allows you to create an error tree and either 
+/// return it to the calling function or break it in a loop
 macro_rules! throw_sg_err {
 	// return macro `compile_error!`.
 	[ return $($tt:tt)* ] => {

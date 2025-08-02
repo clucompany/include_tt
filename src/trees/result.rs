@@ -19,7 +19,7 @@ impl<T> From<TokenStream2> for TreeResult<T> {
 
 /// The functionality repeats the `?` operator, but is written for `TreeResult`.
 // TODO! Requires `try` stabilization from std.
-macro_rules! ttry {
+macro_rules! tq {
 	[ $e: expr ] => {
 		match $e {
 			TreeResult::Ok(a) => a,

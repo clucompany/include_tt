@@ -1,4 +1,4 @@
-use crate::{TreeResult, exprs::literal::ExprLit, throw_sg_err, trees::ttry};
+use crate::{TreeResult, exprs::literal::ExprLit, throw_sg_err, trees::tq};
 use alloc::{
 	fmt::Write,
 	format,
@@ -94,7 +94,7 @@ pub fn g_stringify(group: &'_ Group) -> TreeResult<Option<String>> {
 
 	let iter = group.stream().into_iter();
 	for tt in iter {
-		ttry!(__g_stringify(tt, &mut result));
+		tq!(__g_stringify(tt, &mut result));
 	}
 
 	if result.is_empty() {
@@ -112,7 +112,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		TokenTree2::Group(group) => {
 			let iter = group.stream().into_iter();
 			for tt in iter {
-				ttry!(__g_stringify(tt, w));
+				tq!(__g_stringify(tt, w));
 			}
 		}
 		TokenTree2::Ident(i) => {

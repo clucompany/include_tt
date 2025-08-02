@@ -4,7 +4,7 @@ use crate::{
 		group::g_stringify,
 		loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
 		result::TreeResult,
-		throw_sg_err, ttry,
+		throw_sg_err, tq,
 	},
 };
 use alloc::string::String;
@@ -347,7 +347,7 @@ where
 			// The path is a group of TokenTrees that can be converted to
 			// a string and concatenated.
 
-			match ttry!(g_stringify(&g_stream)) {
+			match tq!(g_stringify(&g_stream)) {
 				Some(stringify) => A::make_tree(
 					// The value is already ready to be used as a path.
 					BehMacroArg0::Stringify(stringify),
