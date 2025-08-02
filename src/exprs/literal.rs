@@ -1,11 +1,10 @@
 use crate::throw_sg_err;
-use alloc::{borrow::ToOwned, string::String};
 use core::{
-	borrow::Borrow,
 	fmt::{Debug, Display},
 	ops::Deref,
 };
 use proc_macro2::{Span, TokenStream as TokenStream2};
+use std::ffi::OsStr;
 
 /// The actual literal expression, written as "./test".
 #[repr(transparent)]
@@ -22,6 +21,13 @@ impl PartialEq<str> for ExprLit {
 	#[inline]
 	fn eq(&self, other: &str) -> bool {
 		PartialEq::eq(self.as_str(), other)
+	}
+}
+
+impl AsRef<OsStr> for ExprLit {
+	#[inline]
+	fn as_ref(&self) -> &OsStr {
+		AsRef::as_ref(self.as_str())
 	}
 }
 
@@ -79,22 +85,6 @@ impl Display for ExprLit {
 	}
 }
 
-impl ToOwned for ExprLit {
-	type Owned = String;
-
-	#[inline]
-	fn to_owned(&self) -> Self::Owned {
-		self.as_str().to_owned()
-	}
-}
-
-impl Borrow<ExprLit> for String {
-	#[inline]
-	fn borrow(&self) -> &ExprLit {
-		unsafe { ExprLit::unchecked(self.as_str()) } // TODO
-	}
-}
-
 impl ExprLit {
 	/// Creating `ExprLit` without clipping.
 	#[inline]
@@ -106,7 +96,7 @@ impl ExprLit {
 
 	/// Creating `ExprLit` without clipping.
 	#[inline]
-	pub const unsafe fn unchecked(a: &str) -> &Self {
+	pub const unsafe fn new_unchecked(a: &str) -> &Self {
 		Self::__new(a)
 	}
 
@@ -169,6 +159,7 @@ impl ExprLit {
 		})
 	}
 
+	#[allow(dead_code)]
 	#[inline]
 	/// Returns `true` if self has a length of zero bytes.
 	pub const fn is_empty(&self) -> bool {

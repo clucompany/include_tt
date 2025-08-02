@@ -5,7 +5,7 @@ use alloc::{
 	string::{String, ToString},
 };
 use core::slice::IterMut;
-use proc_macro2::{Delimiter, Group, TokenTree as TokenTree2};
+use proc_macro2::{Delimiter, Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
 
 /// This function allows you to correctly end a group with
 /// a delimiter () and skip ';' if it is needed.
@@ -89,19 +89,26 @@ pub fn check_correct_endgroup<'i>(
 }
 
 /// A small function that mimics the incomplete behavior of stringify for groups.
-pub fn g_stringify(group: &'_ Group) -> TreeResult<Option<String>> {
+pub fn group_stringify_with_fns<R>(
+	group: &'_ Group,
+	next: impl FnOnce(String) -> R,
+	empty: impl FnOnce() -> R,
+	err: impl FnOnce(TokenStream2) -> R,
+) -> R {
 	let mut result = String::new();
 
 	let iter = group.stream().into_iter();
 	for tt in iter {
-		tq!(__g_stringify(tt, &mut result));
+		if let TreeResult::Err(e) = __g_stringify(tt, &mut result) {
+			return err(e);
+		}
 	}
 
 	if result.is_empty() {
-		return TreeResult::Ok(None);
+		return empty();
 	}
 
-	TreeResult::Ok(Some(result))
+	next(result)
 }
 
 fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {

@@ -15,7 +15,7 @@ pub fn support_replace_tree_in_group<R>(
 ) -> R {
 	let span = real_group.span();
 	let delimeter = real_group.delimiter();
-	
+
 	let mut allts: Vec<TokenTree2> = real_group.stream().into_iter().collect();
 
 	let result = next(allts.iter_mut());
