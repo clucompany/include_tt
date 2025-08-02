@@ -9,9 +9,7 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 
 /// The actual literal expression, written as "./test".
 #[repr(transparent)]
-pub struct ExprLit {
-	data: str,
-}
+pub struct ExprLit(str);
 
 impl PartialEq<ExprLit> for ExprLit {
 	#[inline]
@@ -39,6 +37,11 @@ pub enum ExprLitTryNewErr {
 }
 
 impl ExprLitTryNewErr {
+	#[inline]
+	pub const fn expr_len(current: usize, exp: usize) -> Self {
+		Self::ExpLen { current, exp }
+	}
+
 	/// Convert an error to a syntax tree.
 	#[inline]
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
@@ -124,10 +127,7 @@ impl ExprLit {
 
 		let len = a_array.len();
 		if len < 2 {
-			return err(ExprLitTryNewErr::ExpLen {
-				current: len,
-				exp: 2,
-			});
+			return err(ExprLitTryNewErr::expr_len(len, 2));
 		}
 		debug_assert!({
 			#[allow(clippy::get_first)]
@@ -152,10 +152,7 @@ impl ExprLit {
 					We exclude the possibility of using `'` as more
 					than one character.
 				*/
-				return err(ExprLitTryNewErr::ExpLen {
-					current: len,
-					exp: 3,
-				});
+				return err(ExprLitTryNewErr::expr_len(len, 3));
 			}
 			(b'\'', b'\'') =>
 				/* line */
@@ -175,13 +172,13 @@ impl ExprLit {
 	#[inline]
 	/// Returns `true` if self has a length of zero bytes.
 	pub const fn is_empty(&self) -> bool {
-		self.data.is_empty()
+		self.0.is_empty()
 	}
 
 	/// Getting a string of actual data.
 	#[inline]
 	pub const fn as_str(&self) -> &str {
-		&self.data
+		&self.0
 	}
 }
 
@@ -191,13 +188,10 @@ fn test_literal() {
 	/*
 		Checking the correct operation of ExprLit.
 	*/
-	assert_eq!(
-		ExprLit::try_new(""),
-		Err(ExprLitTryNewErr::ExpLen { current: 0, exp: 2 })
-	);
+	assert_eq!(ExprLit::try_new(""), Err(ExprLitTryNewErr::expr_len(0, 2)));
 	assert_eq!(
 		ExprLit::try_new("\""),
-		Err(ExprLitTryNewErr::ExpLen { current: 1, exp: 2 })
+		Err(ExprLitTryNewErr::expr_len(1, 2))
 	);
 	assert_eq!(ExprLit::try_new("\"\""), Ok(ExprLit::__new("")),);
 	assert_eq!(ExprLit::try_new("'\\'"), Ok(ExprLit::__new("\\")),);
