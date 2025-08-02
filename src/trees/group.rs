@@ -24,11 +24,11 @@ pub fn check_correct_endgroup<'i>(
 
 		let mut iter = endgroup.iter();
 		if let Some(a) = iter.next() {
-			if let Err(..) = write!(str, "`{a}`") {
+			if write!(str, "`{a}`").is_err() {
 				return str;
 			}
 			for a in iter {
-				if let Err(..) = write!(str, ", `{a}`") {
+				if write!(str, ", `{a}`").is_err() {
 					return str;
 				}
 			}
