@@ -104,7 +104,6 @@ use crate::{
 		ttry,
 	},
 };
-use alloc::string::ToString;
 use core::slice::IterMut;
 use proc_macro::TokenStream;
 use proc_macro2::{Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
@@ -150,39 +149,51 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 				if punct.as_char() == '#' {
 					if let Some(m_ident) = iter.next() {
 						if let TokenTree2::Ident(ident) = m_ident {
-							let (add_auto_break, macro_fn): (
+							let (is_add_auto_break, macro_fn): (
 								bool,
 								fn(&Group) -> TreeResult<TokenTree2>,
 							) = {
-								let str_ident = ident.to_string();
-
-								match str_ident.as_str() {
-									"include" | "include_tt" => {
+								match ident {
+									ident if ident == "include" || ident == "include_tt" => {
 										(false, macro_rule_include::<IncludeTT>)
 									}
-									"include_and_break" | "include_tt+break" => {
+									ident
+										if ident == "include_and_break"
+											|| ident == "include_tt+break" =>
+									{
 										(true, macro_rule_include::<IncludeTT>)
 									}
 
-									"include_and_fix_unknown_start_token"
-									| "include_tt_and_fix_unknown_start_token" => {
+									ident
+										if ident == "include_and_fix_unknown_start_token"
+											|| ident
+												== "include_tt_and_fix_unknown_start_token" =>
+									{
 										(false, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
 									}
-									"include_and_fix_unknown_start_token_and_break"
-									| "include_tt_and_fix_unknown_start_token_and_break" => {
+									ident
+										if ident
+											== "include_and_fix_unknown_start_token_and_break"
+											|| ident
+												== "include_tt_and_fix_unknown_start_token_and_break" =>
+									{
 										(true, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
 									}
 
-									"include_str" => (false, macro_rule_include::<IncludeStr>),
-									"include_str_and_break" => {
+									ident if ident == "include_str" => {
+										(false, macro_rule_include::<IncludeStr>)
+									}
+									ident if ident == "include_str_and_break" => {
 										(true, macro_rule_include::<IncludeStr>)
 									}
-									"include_arr" => (false, macro_rule_include::<IncludeArr>),
-									"include_arr_and_break" => {
+									ident if ident == "include_arr" => {
+										(false, macro_rule_include::<IncludeArr>)
+									}
+									ident if ident == "include_arr_and_break" => {
 										(true, macro_rule_include::<IncludeArr>)
 									}
 
-									"break" | "break_search_macro" => {
+									ident if ident == "break" || ident == "break_search_macro" => {
 										/*
 											Stop indexing after the given keyword. This saves resources.
 										*/
@@ -225,7 +236,7 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 												*m_punct2 = nulltt.clone();
 												*m_group = result;
 
-												match add_auto_break {
+												match is_add_auto_break {
 													false => continue 'sbegin,
 													true => return SearchGroup::Break,
 												}
