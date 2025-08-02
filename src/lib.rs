@@ -91,6 +91,7 @@ use std::fmt::Write;
 extern crate alloc;
 extern crate proc_macro;
 
+use crate::trees::throw_sg_err;
 use crate::{
 	macros::include::{
 		IncludeArr, IncludeStr, IncludeTT, IncludeTTAndFixUnkStartToken, macro_rule_include,
@@ -107,7 +108,6 @@ use alloc::string::ToString;
 use core::slice::IterMut;
 use proc_macro::TokenStream;
 use proc_macro2::{Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
-use crate::trees::throw_sg_err;
 
 /// Components, templates, code for the search
 /// and final construction of trees.

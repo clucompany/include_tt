@@ -11,12 +11,7 @@ use alloc::string::String;
 use proc_macro2::{
 	Delimiter, Group, Literal, Span, TokenStream as TokenStream2, TokenTree as TokenTree2,
 };
-use std::{
-	borrow::Cow,
-	fs::File,
-	io::Read,
-	path::Path,
-};
+use std::{borrow::Cow, fs::File, io::Read, path::Path};
 
 /// A trait that specifies the final behavior for the `include` macro.
 pub trait BehMacroInclude {
