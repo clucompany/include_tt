@@ -110,7 +110,7 @@ impl BehMacroInclude for IncludeTT {
 						let mut ngroup = Group::new(Delimiter::None, ett);
 						ngroup.set_span(group_span);
 
-						return TreeResult::Ok(TokenTree2::Group(ngroup));
+						TreeResult::Ok(TokenTree2::Group(ngroup))
 					},
 					|e| TreeResult::Err(e.into_tt_err(literal_span)),
 				)
@@ -213,7 +213,7 @@ impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
 						let mut ngroup = Group::new(Delimiter::None, ett);
 						ngroup.set_span(group_span);
 
-						return TreeResult::Ok(TokenTree2::Group(ngroup));
+						TreeResult::Ok(TokenTree2::Group(ngroup))
 					},
 					|e| TreeResult::Err(e.into_tt_err(literal_span)),
 				)
@@ -320,7 +320,7 @@ impl BehMacroInclude for IncludeArr {
 				let mut lit = Literal::byte_string(&vec);
 				lit.set_span(group_span);
 
-				return TreeResult::Ok(TokenTree2::Literal(lit));
+				TreeResult::Ok(TokenTree2::Literal(lit))
 			},
 			|e| TreeResult::Err(e.into_tt_err(literal_span)),
 		)

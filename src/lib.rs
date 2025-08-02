@@ -88,7 +88,6 @@ use std::fmt::Write;
 // #![no_std] TODO, impossible without: [std::io::Error, std::{io::Read, fs::File}, std::fs::read_to_string]
 #![allow(clippy::redundant_field_names)]
 #![allow(clippy::redundant_pattern_matching)]
-#![allow(clippy::needless_return)]
 #![allow(clippy::tabs_in_doc_comments)]
 
 extern crate alloc;

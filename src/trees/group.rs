@@ -62,7 +62,7 @@ pub fn check_correct_endgroup<'i>(
 							}
 						}
 
-						return TreeResult::Ok(optm_punct);
+						TreeResult::Ok(optm_punct)
 					}
 
 					_ => {
@@ -79,7 +79,7 @@ pub fn check_correct_endgroup<'i>(
 				}
 			}
 		}
-		Delimiter::Brace => return TreeResult::Ok(None), // `{ ... }`, ok
+		Delimiter::Brace => TreeResult::Ok(None), // `{ ... }`, ok
 		Delimiter::Bracket | Delimiter::None => {
 			throw_sg_err! {
 				return [group.span()]: "Unsupported group type."
