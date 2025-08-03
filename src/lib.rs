@@ -274,10 +274,30 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 							fn(&Group, Option<&mut PointTrack<'tk>>) -> TreeResult<TokenTree2>,
 						) = {
 							match ident {
-								ident if ident == "POINT_TRACKER_FILES" => {
+								ident if ident == "AS_IS" => {
 									/*
 										Stop indexing after the given keyword. This saves resources.
 									*/
+									if let Some(m_punct2) = iter.next() {
+										#[allow(clippy::collapsible_match)]
+										if let TokenTree2::Punct(punct2) = m_punct2 {
+											if punct2.as_char() == ':' {
+												let nulltt = make_null_ttree();
+
+												*m_ident = nulltt.clone();
+												*m_punct = nulltt.clone();
+												*m_punct2 = nulltt;
+												
+												return SearchGroup::Break;
+											}
+										}
+									}
+
+									throw_sg_err! {
+										return [ident.span()]: "`:` was expected."
+									}
+								}
+								ident if ident == "POINT_TRACKER_FILES" => {
 									if let Some(m_punct2) = iter.next() {
 										if let TokenTree2::Punct(punct2) = m_punct2 {
 											if punct2.as_char() == ':' {
