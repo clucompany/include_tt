@@ -2,16 +2,16 @@ use crate::{
 	PointTrack,
 	exprs::literal::ExprLit,
 	trees::{
-		group::group_stringify_with_fns,
+		group::stream_stringify_with_fns,
 		loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
 		null::make_null_group,
 		result::TreeResult,
-		throw_sg_err,
 	},
 };
 use proc_macro2::{
 	Delimiter, Group, Literal, Span, TokenStream as TokenStream2, TokenTree as TokenTree2,
 };
+use quote::ToTokens;
 use std::{borrow::Cow, io::Error as IOError, path::Path};
 use std::{fs::File, io::Read};
 
@@ -25,9 +25,7 @@ pub trait BehMacroInclude {
 		arg0: &ExprLit,
 		point_track_file: Option<&mut PointTrack>,
 		//
-		group_span: Span,
-		// `span` indicating a literal occurrence or group describing a future path.
-		literal_span: Span,
+		span: Span,
 	) -> TreeResult<Self::Result>;
 
 	/// Create an empty valid tree.
@@ -50,8 +48,7 @@ impl BehMacroInclude for InjectTT {
 		sspath: &ExprLit,
 		point_track: Option<&mut PointTrack>,
 
-		group_span: Span,
-		literal_span: Span,
+		span: Span,
 	) -> TreeResult<Self::Result> {
 		let path = Path::new(sspath.as_str());
 		load_file_and_automake_tree_with_fns(
@@ -62,11 +59,11 @@ impl BehMacroInclude for InjectTT {
 				let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
 
 				let mut ngroup = Group::new(Delimiter::None, ett);
-				ngroup.set_span(group_span);
+				ngroup.set_span(span);
 
 				TreeResult::Ok(TokenTree2::Group(ngroup))
 			},
-			|e| TreeResult::Err(e.into_tt_err(literal_span)),
+			|e| TreeResult::Err(e.into_tt_err(span)),
 		)
 	}
 }
@@ -89,8 +86,7 @@ impl BehMacroInclude for InjectCTT {
 		sspath: &ExprLit,
 		point_track: Option<&mut PointTrack>,
 
-		group_span: Span,
-		literal_span: Span,
+		span: Span,
 	) -> TreeResult<Self::Result> {
 		let sspath = Path::new(sspath);
 		load_file_and_automake_tree_with_fns(
@@ -157,11 +153,11 @@ impl BehMacroInclude for InjectCTT {
 				let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
 
 				let mut ngroup = Group::new(Delimiter::None, ett);
-				ngroup.set_span(group_span);
+				ngroup.set_span(span);
 
 				TreeResult::Ok(TokenTree2::Group(ngroup))
 			},
-			|e| TreeResult::Err(e.into_tt_err(literal_span)),
+			|e| TreeResult::Err(e.into_tt_err(span)),
 		)
 	}
 }
@@ -184,8 +180,7 @@ impl BehMacroInclude for InjectStr {
 		sspath: &ExprLit,
 		point_track: Option<&mut PointTrack>,
 
-		group_span: Span,
-		literal_span: Span,
+		span: Span,
 	) -> TreeResult<Self::Result> {
 		let path = Path::new(sspath);
 
@@ -195,7 +190,7 @@ impl BehMacroInclude for InjectStr {
 					point_track.append_track_file(path);
 				}
 				let mut lit = Literal::string(&data);
-				lit.set_span(group_span);
+				lit.set_span(span);
 
 				TreeResult::Ok(TokenTree2::Literal(lit))
 			}
@@ -205,7 +200,7 @@ impl BehMacroInclude for InjectStr {
 					.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
 
 				TreeResult::Err(
-					LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(literal_span),
+					LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(span),
 				)
 			}
 		}
@@ -230,8 +225,7 @@ impl BehMacroInclude for InjectArr {
 		sspath: &ExprLit,
 		point_track: Option<&mut PointTrack>,
 
-		group_span: Span,
-		literal_span: Span,
+		span: Span,
 	) -> TreeResult<Self::Result> {
 		let path = Path::new(sspath);
 		let vec = {
@@ -240,7 +234,7 @@ impl BehMacroInclude for InjectArr {
 					.canonicalize()
 					.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
 				TreeResult::from(
-					LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(literal_span),
+					LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(span),
 				)
 			};
 			let mut file = match File::open(path) {
@@ -260,7 +254,7 @@ impl BehMacroInclude for InjectArr {
 			point_track.append_track_file(path);
 		}
 		let mut lit = Literal::byte_string(&vec);
-		lit.set_span(group_span);
+		lit.set_span(span);
 
 		TreeResult::Ok(TokenTree2::Literal(lit))
 	}
@@ -274,65 +268,18 @@ pub fn macro_rule_include<A>(
 where
 	A: BehMacroInclude,
 {
-	let stream0 = {
-		let all_streams = group.stream();
-		let mut iter = all_streams.into_iter();
+	let span = group.span();
+	let stream = group.into_token_stream();
+	stream_stringify_with_fns(
+		stream,
+		|stringify| {
+			let exprlit = unsafe { ExprLit::new_unchecked(&stringify) };
 
-		let stream0 = iter.next();
-		if let Some(unk) = iter.next() {
-			throw_sg_err! {
-				return [unk.span()]: "Specify a valid path to the file written with `\"/Test.tt\"`, or `'T'`, or use a group of different trees `[/, \"Test\", '/']`."
-			}
-		}
-
-		stream0
-	};
-
-	match stream0 {
-		None => TreeResult::Ok(A::make_empty_tree(group.span())),
-		Some(TokenTree2::Group(g_stream)) => {
-			// The path is a group of TokenTrees that can be converted to
-			// a string and concatenated.
-
-			group_stringify_with_fns(
-				&g_stream,
-				|stringify| {
-					let exprlit = unsafe { ExprLit::new_unchecked(&stringify) };
-
-					A::make_tree(
-						// The value is already ready to be used as a path.
-						exprlit,
-						point_track,
-						group.span(),
-						g_stream.span(),
-					)
-				},
-				// Empty
-				|| TreeResult::Ok(A::make_empty_tree(group.span())),
-				// Err
-				TreeResult::Err,
-			)
-		}
-		Some(TokenTree2::Literal(literal)) => {
-			// The path is a single string
-
-			ExprLit::try_new_with_fns(
-				&literal.to_string(),
-				|slit| {
-					A::make_tree(
-						// Can be `"Test"` or `'T'` (with actual quotes in the value)
-						// and may require character escaping to be handled.
-						slit,
-						point_track,
-						group.span(),
-						literal.span(),
-					)
-				},
-				|e| TreeResult::Err(e.into_tt_err(literal.span())),
-			)
-		}
-		Some(g_stream) => throw_sg_err! {
-			return [g_stream.span()]: "The path was expected as a single string (example: \"../test.tt\") or a path formatted as separate TokenTrees (example: ['.' '.' test \".tt\"])."
+			A::make_tree(exprlit, point_track, span)
 		},
-	}
+		// Empty
+		|| TreeResult::Ok(A::make_empty_tree(span)),
+		// Err
+		TreeResult::Err,
+	)
 }

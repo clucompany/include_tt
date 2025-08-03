@@ -359,7 +359,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 							}
 
 							_ => throw_sg_err! {
-								return [ident.span()]: "Unknown inclusion type, expected: `tt`, `ctt`, `arr`, `str`"
+								return [ident.span()]: "Undefined action to include data in macro or change its behavior, expected macro data type: `tt`, `ctt`, `arr`, `str`, or marker: `#AS_IS:`, `#POINT_TRACKER_FILES:`, or stop parsing macro via `#break;`."
 							},
 						};
 
