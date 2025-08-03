@@ -11,6 +11,10 @@ description = "Macro for embedding (trees, strings, arrays) into macro trees dir
 keywords = ["procedural-macros", "macro", "code-generation", "code-transformation", "clucompany"]
 categories = ["development-tools", "development-tools::build-utils"]
 
+[features]
+default = [ ]
+escape_symbol = []
+
 [lib]
 proc-macro = true
 

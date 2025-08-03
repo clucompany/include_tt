@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream as TokenStream2;
 
-/// Events for the `search_include_and_replacegroup` function.
+/// Events for the `autoinject_tt_in_group` function.
 pub(crate) enum SearchGroup {
 	/// Abort the group search
 	/// and display an error.
