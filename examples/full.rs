@@ -47,17 +47,17 @@ fn main() {
 	inject! {
 		#POINT_TRACKER_FILES:
 		test2_rules! {
-			[ #include!("./examples/full.tt") ] // this file contains `a, b`.
-			[ #include! { "./examples/full.tt" } ] // this file contains `a, b`.
+			[ #tt!("./examples/full.tt") ] // this file contains `a, b`.
+			[ #tt! { "./examples/full.tt" } ] // this file contains `a, b`.
 		}
 		test2_rules! {
-			#include!("./examples/full.tt") // this file contains `a, b`.
+			#tt!("./examples/full.tt") // this file contains `a, b`.
 		}
 
 		println!(
 			concat!(
 				"#",
-				#include_str!("./examples/full.tt"), // this file contains `a, b`.
+				#str!("./examples/full.tt"), // this file contains `a, b`.
 				"#"
 			)
 		);
@@ -65,14 +65,14 @@ fn main() {
 
 	{
 		// Loading a string from a file.
-		let str = inject!(#include_str!("./examples/full.tt")); // this file contains `a, b`.
+		let str = inject!(#str!("./examples/full.tt")); // this file contains `a, b`.
 		assert_eq!(str, "a, b");
 	}
 
 	{
 		// Loading an array from a file.
 		let array: &'static [u8; 4] = inject!(
-			#include_arr!("./examples/full.tt") // this file contains `a, b`.
+			#array!("./examples/full.tt") // this file contains `a, b`.
 		);
 		assert_eq!(array, b"a, b");
 	}
@@ -88,7 +88,7 @@ fn main() {
 				&mut end_str,
 
 				"arg1: {}, arg2: {}",
-				#include!("./examples/full.tt") // this file contains `a, b`.
+				#tt!("./examples/full.tt") // this file contains `a, b`.
 			);
 		}
 		assert_eq!(end_str, "arg1: 10, arg2: 20");

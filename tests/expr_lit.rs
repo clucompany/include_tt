@@ -4,7 +4,8 @@ use include_tt::inject;
 fn test_expr_lit() {
 	let str = inject! {
 		// File contains: `"123\"test"`
-		#include_and_break!("./tests/expr_lit.tt")
+		#tt!("./tests/expr_lit.tt")
+		#break;
 	};
 
 	assert_eq!(str, "123\"test");

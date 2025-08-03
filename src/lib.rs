@@ -293,47 +293,22 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 										return [ident.span()]: "`:` was expected."
 									}
 								}
-								ident if ident == "include" || ident == "include_tt" => {
+								ident if ident == "tt" => {
 									(false, macro_rule_include::<IncludeTT>)
 								}
-								ident
-									if ident == "include_and_break"
-										|| ident == "include_tt+break" =>
-								{
-									(true, macro_rule_include::<IncludeTT>)
-								}
 
-								ident
-									if ident == "include_and_fix_unknown_start_token"
-										|| ident == "include_tt_and_fix_unknown_start_token" =>
-								{
+								ident if ident == "ctt" => {
 									(false, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
 								}
-								ident
-									if ident == "include_and_fix_unknown_start_token_and_break"
-										|| ident
-											== "include_tt_and_fix_unknown_start_token_and_break" =>
-								{
-									(true, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
-								}
 
-								ident if ident == "include_str" => {
+								ident if ident == "str" => {
 									(false, macro_rule_include::<IncludeStr>)
 								}
-								ident if ident == "include_str_and_break" => {
-									(true, macro_rule_include::<IncludeStr>)
-								}
-								ident if ident == "include_arr" => {
+								ident if ident == "arr" || ident == "array" => {
 									(false, macro_rule_include::<IncludeArr>)
 								}
-								ident if ident == "include_arr_and_break" => {
-									(true, macro_rule_include::<IncludeArr>)
-								}
 
-								ident
-									if ident == "break"
-										|| ident == "BREAK" || ident == "break_search_macro" =>
-								{
+								ident if ident == "break" || ident == "BREAK" => {
 									/*
 										Stop indexing after the given keyword. This saves resources.
 									*/

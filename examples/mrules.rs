@@ -42,7 +42,7 @@ fn main() {
 		// a - b = n
 		#POINT_TRACKER_FILES:
 		test_rules! {
-			#include!("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
+			#tt!("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
 		}
 	}
 	assert_eq!(n, a + b);
