@@ -91,6 +91,7 @@ use std::fmt::Write;
 extern crate alloc;
 extern crate proc_macro;
 
+use crate::trees::null::make_null_group;
 use crate::trees::throw_sg_err;
 use crate::{
 	include::{
@@ -98,7 +99,7 @@ use crate::{
 	},
 	trees::{
 		null::make_null_ttree,
-		replace::{support_replace_tree_in_group, support_replace_tree_in_stream},
+		replace::{replace_tree_in_group, replace_tree_in_stream},
 		result::TreeResult,
 		search::SearchGroup,
 		tq,
@@ -106,7 +107,9 @@ use crate::{
 };
 use core::slice::IterMut;
 use proc_macro::TokenStream;
-use proc_macro2::{Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
+use proc_macro2::{Delimiter, Group, Span, TokenStream as TokenStream2, TokenTree as TokenTree2};
+use quote::{format_ident, quote};
+use std::path::Path;
 
 /// Components, templates, code for the search
 /// and final construction of trees.
@@ -136,112 +139,234 @@ pub(crate) mod exprs {
 /// Code component of macros.
 pub(crate) mod include;
 
+pub(crate) struct PointTrack<'tk> {
+	token: &'tk mut TokenTree2,
+	appends_files: usize,
+	globalposnum: usize,
+}
+
+impl<'tk> PointTrack<'tk> {
+	#[inline]
+	pub fn new(globalposnum: usize, token: &'tk mut TokenTree2) -> Self {
+		Self {
+			token,
+			appends_files: 0,
+			globalposnum,
+		}
+	}
+
+	#[inline]
+	pub fn span(&self) -> Span {
+		self.token.span()
+	}
+	
+	#[inline]
+	pub const fn is_rewritten(&self) -> bool {
+		self.appends_files > 0
+	}
+
+	pub fn into_token_tree2(self) -> Option<(usize, TokenTree2)> {
+		match self.appends_files {
+			0 => None,
+			appends_files => {
+				let span = self.span();
+
+				Some((
+					appends_files,
+					std::mem::replace(self.token, make_null_group(span)),
+				))
+			}
+		}
+	}
+
+	pub fn append_track_file(&mut self, path: &Path) {
+		let name_const = format_ident!(
+			"_TRACKER_FILE_NUM_{}",
+			self.globalposnum + self.appends_files
+		);
+
+		let path = format!("../{}", path.display());
+		let ts2 = TokenStream2::from_iter(quote! {
+			/// #POINT_TRACKER_FILES;
+			const #name_const: &'static [u8] = include_bytes!(#path) as &[_];
+		});
+
+		self.append_track_files_ts(ts2)
+	}
+
+	pub fn append_track_files_ts(&mut self, ts2: TokenStream2) {
+		let span = self.token.span();
+		let is_initappendfiles = self.appends_files == 0;
+		self.appends_files += 1;
+
+		let mut ngroup = Group::new(Delimiter::None, ts2);
+		ngroup.set_span(span);
+
+		if is_initappendfiles {
+			*self.token = ngroup.into();
+		} else {
+			match &mut self.token {
+				TokenTree2::Group(group) => {
+					let mut new_group: Vec<TokenTree2> = group.stream().into_iter().collect();
+					new_group.push(ngroup.into());
+
+					let mut ngroup =
+						Group::new(Delimiter::None, TokenStream2::from_iter(new_group));
+					ngroup.set_span(span);
+
+					*self.token = ngroup.into();
+				}
+				_ => panic!(
+					"Undefined behavior reported in `PointTrack`, someone redefined `TokenTree2`, expected `TokenTree2::Group`"
+				),
+			}
+		}
+	}
+}
+
+impl<'tk> Drop for PointTrack<'tk> {
+	fn drop(&mut self) {
+		if self.appends_files == 0 {
+			*self.token = make_null_ttree();
+		}
+	}
+}
+
 /// The task of the function is to find a group with the desired macro
 /// and perform useful work specific to the selected macro.
 ///
 /// The design of this feature has been adapted to search for attachments.
-fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> SearchGroup {
+fn search_include_and_replacegroup<'tk, 'gpsn>(
+	globalposnum: &'gpsn mut usize,
+	mut iter: IterMut<'tk, TokenTree2>,
+	point_track_file: &'_ mut Option<PointTrack<'tk>>,
+) -> SearchGroup {
 	'sbegin: while let Some(m_punct) = iter.next() {
 		match m_punct {
-			TokenTree2::Punct(punct) => {
-				if punct.as_char() == '#' {
-					if let Some(m_ident) = iter.next() {
-						if let TokenTree2::Ident(ident) = m_ident {
-							let (is_add_auto_break, macro_fn): (
-								bool,
-								fn(&Group) -> TreeResult<TokenTree2>,
-							) = {
-								match ident {
-									ident if ident == "include" || ident == "include_tt" => {
-										(false, macro_rule_include::<IncludeTT>)
-									}
-									ident
-										if ident == "include_and_break"
-											|| ident == "include_tt+break" =>
-									{
-										(true, macro_rule_include::<IncludeTT>)
-									}
+			TokenTree2::Punct(punct) if punct.as_char() == '#' => {
+				if let Some(m_ident) = iter.next() {
+					if let TokenTree2::Ident(ident) = m_ident {
+						#[allow(clippy::type_complexity)]
+						let (is_add_auto_break, macro_fn): (
+							bool,
+							fn(&Group, Option<&mut PointTrack<'tk>>) -> TreeResult<TokenTree2>,
+						) = {
+							match ident {
+								ident if ident == "POINT_TRACKER_FILES" => {
+									/*
+										Stop indexing after the given keyword. This saves resources.
+									*/
+									if let Some(m_punct2) = iter.next() {
+										if let TokenTree2::Punct(punct2) = m_punct2 {
+											if punct2.as_char() == ';' {
+												let nulltt = make_null_ttree();
 
-									ident
-										if ident == "include_and_fix_unknown_start_token"
-											|| ident
-												== "include_tt_and_fix_unknown_start_token" =>
-									{
-										(false, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
-									}
-									ident
-										if ident
-											== "include_and_fix_unknown_start_token_and_break"
-											|| ident
-												== "include_tt_and_fix_unknown_start_token_and_break" =>
-									{
-										(true, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
-									}
+												*point_track_file =
+													Some(PointTrack::new(*globalposnum, m_ident));
 
-									ident if ident == "include_str" => {
-										(false, macro_rule_include::<IncludeStr>)
-									}
-									ident if ident == "include_str_and_break" => {
-										(true, macro_rule_include::<IncludeStr>)
-									}
-									ident if ident == "include_arr" => {
-										(false, macro_rule_include::<IncludeArr>)
-									}
-									ident if ident == "include_arr_and_break" => {
-										(true, macro_rule_include::<IncludeArr>)
-									}
+												//*m_ident = nulltt.clone();
+												*m_punct = nulltt.clone();
+												*m_punct2 = nulltt;
 
-									ident if ident == "break" || ident == "break_search_macro" => {
-										/*
-											Stop indexing after the given keyword. This saves resources.
-										*/
-										if let Some(m_punct2) = iter.next() {
-											if let TokenTree2::Punct(punct2) = m_punct2 {
-												if punct2.as_char() == ';' {
-													let nulltt = make_null_ttree();
-
-													*m_ident = nulltt.clone();
-													*m_punct = nulltt.clone();
-													*m_punct2 = nulltt;
-
-													return SearchGroup::Break;
-												}
+												continue 'sbegin;
 											}
 										}
-
-										throw_sg_err! {
-											return [ident.span()]: "`;` was expected."
-										}
 									}
 
-									_ => throw_sg_err! {
-										return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`, `include_and_break`, `include_tt_and_break`, `include_and_fix_unknown_start_token_and_break`, `include_tt_and_fix_unknown_start_token_and_break`, `include_str_and_break`, `include_arr_and_break`."
-									},
+									throw_sg_err! {
+										return [ident.span()]: "`;` was expected."
+									}
 								}
-							};
+								ident if ident == "include" || ident == "include_tt" => {
+									(false, macro_rule_include::<IncludeTT>)
+								}
+								ident
+									if ident == "include_and_break"
+										|| ident == "include_tt+break" =>
+								{
+									(true, macro_rule_include::<IncludeTT>)
+								}
 
-							if let Some(m_punct2) = iter.next() {
-								if let TokenTree2::Punct(punct2) = m_punct2 {
-									if punct2.as_char() == '!' {
-										if let Some(m_group) = iter.next() {
-											if let TokenTree2::Group(group) = m_group {
-												let result = tq!(macro_fn(group));
+								ident
+									if ident == "include_and_fix_unknown_start_token"
+										|| ident == "include_tt_and_fix_unknown_start_token" =>
+								{
+									(false, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
+								}
+								ident
+									if ident == "include_and_fix_unknown_start_token_and_break"
+										|| ident
+											== "include_tt_and_fix_unknown_start_token_and_break" =>
+								{
+									(true, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
+								}
 
+								ident if ident == "include_str" => {
+									(false, macro_rule_include::<IncludeStr>)
+								}
+								ident if ident == "include_str_and_break" => {
+									(true, macro_rule_include::<IncludeStr>)
+								}
+								ident if ident == "include_arr" => {
+									(false, macro_rule_include::<IncludeArr>)
+								}
+								ident if ident == "include_arr_and_break" => {
+									(true, macro_rule_include::<IncludeArr>)
+								}
+
+								ident
+									if ident == "break"
+										|| ident == "BREAK" || ident == "break_search_macro" =>
+								{
+									/*
+										Stop indexing after the given keyword. This saves resources.
+									*/
+									if let Some(m_punct2) = iter.next() {
+										if let TokenTree2::Punct(punct2) = m_punct2 {
+											if punct2.as_char() == ';' {
 												let nulltt = make_null_ttree();
 
 												*m_ident = nulltt.clone();
 												*m_punct = nulltt.clone();
-												*m_punct2 = nulltt.clone();
-												*m_group = result;
+												*m_punct2 = nulltt;
 
-												match is_add_auto_break {
-													false => continue 'sbegin,
-													true => return SearchGroup::Break,
-												}
+												return SearchGroup::Break;
 											}
 										}
 									}
-									// autoskip
+
+									throw_sg_err! {
+										return [ident.span()]: "`;` was expected."
+									}
+								}
+
+								_ => throw_sg_err! {
+									return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`, `include_and_break`, `include_tt_and_break`, `include_and_fix_unknown_start_token_and_break`, `include_tt_and_fix_unknown_start_token_and_break`, `include_str_and_break`, `include_arr_and_break`."
+								},
+							}
+						};
+
+						if let Some(m_punct2) = iter.next() {
+							if let TokenTree2::Punct(punct2) = m_punct2 {
+								if punct2.as_char() == '!' {
+									if let Some(m_group) = iter.next() {
+										if let TokenTree2::Group(group) = m_group {
+											let result =
+												tq!(macro_fn(group, point_track_file.as_mut()));
+
+											let nulltt = make_null_ttree();
+
+											*m_ident = nulltt.clone();
+											*m_punct = nulltt.clone();
+											*m_punct2 = nulltt.clone();
+											*m_group = result;
+
+											match is_add_auto_break {
+												false => continue 'sbegin,
+												true => return SearchGroup::Break,
+											}
+										}
+									}
 								}
 							}
 						}
@@ -250,8 +375,36 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 			}
 			// If this is a group, then you need to go down inside the
 			// group and look for the necessary macros there.
-			TokenTree2::Group(group) => match support_replace_tree_in_group(group, |mut iter| {
-				search_include_and_replacegroup(&mut iter)
+			TokenTree2::Group(group) => match replace_tree_in_group(group, |iter| {
+				let mut ngroup;
+				#[allow(clippy::manual_map)] // see ngroup
+				let mut ptf = match point_track_file {
+					Some(point_track_file) => Some({
+						ngroup = make_null_group(point_track_file.span());
+
+						PointTrack::new(*globalposnum, &mut ngroup)
+					}),
+					None => None,
+				};
+
+				let result = search_include_and_replacegroup(globalposnum, iter, &mut ptf);
+				if let Some(ptf) = ptf {
+					if ptf.is_rewritten() {
+						if let Some(point_track_file) = point_track_file {
+							match ptf.into_token_tree2() {
+								Some((appends_files, TokenTree2::Group(group))) => {
+									*globalposnum += appends_files;
+									
+									point_track_file.append_track_files_ts(group.stream());
+								}
+								_ => panic!(
+									"Undefined behavior reported in `PointTrack`, someone redefined `TokenTree2`, expected `TokenTree2::Group`"
+								),
+							}
+						}
+					}
+				}
+				result
 			}) {
 				SearchGroup::Break => continue 'sbegin,
 				result @ SearchGroup::Error(..) => return result,
@@ -305,8 +458,8 @@ fn search_include_and_replacegroup(iter: &mut IterMut<'_, TokenTree2>) -> Search
 pub fn include_tt(input: TokenStream) -> TokenStream {
 	let mut tt: TokenStream2 = input.into();
 
-	match support_replace_tree_in_stream(&mut tt, |mut iter| {
-		search_include_and_replacegroup(&mut iter)
+	match replace_tree_in_stream(&mut tt, |iter| {
+		search_include_and_replacegroup(&mut 0, iter, &mut None)
 	}) {
 		SearchGroup::Error(e) => e.into(),
 		SearchGroup::Break => tt.into(),

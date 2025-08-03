@@ -8,16 +8,15 @@ use proc_macro2::{Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
 
 /// A small function that provides the ability
 /// to iterate and replace trees in place.
-pub fn support_replace_tree_in_group<R>(
+pub fn replace_tree_in_group<R>(
 	real_group: &mut Group,
 
-	next: impl FnOnce(IterMut<TokenTree2>) -> R,
+	next: impl FnOnce(IterMut<'_, TokenTree2>) -> R,
 ) -> R {
 	let span = real_group.span();
 	let delimeter = real_group.delimiter();
 
 	let mut allts: Vec<TokenTree2> = real_group.stream().into_iter().collect();
-
 	let result = next(allts.iter_mut());
 
 	let mut ngroup = Group::new(delimeter, TokenStream2::from_iter(allts));
@@ -30,11 +29,11 @@ pub fn support_replace_tree_in_group<R>(
 /// A small function that provides the ability
 /// to iterate and replace trees in place.
 ///
-/// For a group, use the `support_replace_tree_in_group` function.
-pub fn support_replace_tree_in_stream<R>(
+/// For a group, use the `replace_tree_in_group` function.
+pub fn replace_tree_in_stream<R>(
 	stream: &mut TokenStream2,
 
-	next: impl FnOnce(IterMut<TokenTree2>) -> R,
+	next: impl FnOnce(IterMut<'_, TokenTree2>) -> R,
 ) -> R {
 	let mut allts: Vec<TokenTree2> = core::mem::take(stream).into_iter().collect();
 

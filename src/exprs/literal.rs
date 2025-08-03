@@ -132,6 +132,7 @@ impl ExprLit {
 		/*
 			This is safe, the extra necessary checks are done in a separate `if` above.
 		*/
+
 		match unsafe { (a_array.get_unchecked(0), a_array.get_unchecked(len - 1)) } {
 			(b'"', b'"') =>
 				/* line */

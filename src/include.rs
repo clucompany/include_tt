@@ -1,4 +1,5 @@
 use crate::{
+	PointTrack,
 	exprs::literal::ExprLit,
 	trees::{
 		group::group_stringify_with_fns,
@@ -22,7 +23,7 @@ pub trait BehMacroInclude {
 	/// Assembly of the final tree.
 	fn make_tree(
 		arg0: &ExprLit,
-
+		point_track_file: Option<&mut PointTrack>,
 		//
 		group_span: Span,
 		// `span` indicating a literal occurrence or group describing a future path.
@@ -47,6 +48,7 @@ impl BehMacroInclude for IncludeTT {
 
 	fn make_tree(
 		sspath: &ExprLit,
+		point_track: Option<&mut PointTrack>,
 
 		group_span: Span,
 		literal_span: Span,
@@ -54,6 +56,7 @@ impl BehMacroInclude for IncludeTT {
 		let path = Path::new(sspath.as_str());
 		load_file_and_automake_tree_with_fns(
 			path,
+			point_track,
 			|_| {}, /* skip_prepare */
 			|fs_tt| {
 				let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
@@ -84,6 +87,7 @@ impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
 
 	fn make_tree(
 		sspath: &ExprLit,
+		point_track: Option<&mut PointTrack>,
 
 		group_span: Span,
 		literal_span: Span,
@@ -91,8 +95,9 @@ impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
 		let sspath = Path::new(sspath);
 		load_file_and_automake_tree_with_fns(
 			sspath,
+			point_track,
 			|p_string| {
-				/*fix unk start token*/
+				/* fix unk start token */
 				let mut p_str = p_string.as_mut();
 				while let Some(pos) = p_str.find('\\' /* one symb */) {
 					let right = unsafe {
@@ -177,6 +182,7 @@ impl BehMacroInclude for IncludeStr {
 
 	fn make_tree(
 		sspath: &ExprLit,
+		point_track: Option<&mut PointTrack>,
 
 		group_span: Span,
 		literal_span: Span,
@@ -185,6 +191,9 @@ impl BehMacroInclude for IncludeStr {
 
 		match std::fs::read_to_string(path) {
 			Ok(data) => {
+				if let Some(point_track) = point_track {
+					point_track.append_track_file(path);
+				}
 				let mut lit = Literal::string(&data);
 				lit.set_span(group_span);
 
@@ -219,12 +228,13 @@ impl BehMacroInclude for IncludeArr {
 
 	fn make_tree(
 		sspath: &ExprLit,
+		point_track: Option<&mut PointTrack>,
 
 		group_span: Span,
 		literal_span: Span,
 	) -> TreeResult<Self::Result> {
+		let path = Path::new(sspath);
 		let vec = {
-			let path = Path::new(sspath);
 			let make_err = |e: IOError| {
 				let path = path
 					.canonicalize()
@@ -246,6 +256,9 @@ impl BehMacroInclude for IncludeArr {
 			vec
 		};
 
+		if let Some(point_track) = point_track {
+			point_track.append_track_file(path);
+		}
 		let mut lit = Literal::byte_string(&vec);
 		lit.set_span(group_span);
 
@@ -254,7 +267,10 @@ impl BehMacroInclude for IncludeArr {
 }
 
 /// Build macro `include`/`include_str`/`include_arr`.
-pub fn macro_rule_include<A>(group: &'_ Group) -> TreeResult<A::Result>
+pub fn macro_rule_include<A>(
+	group: &'_ Group,
+	point_track: Option<&mut PointTrack>,
+) -> TreeResult<A::Result>
 where
 	A: BehMacroInclude,
 {
@@ -282,9 +298,11 @@ where
 				&g_stream,
 				|stringify| {
 					let exprlit = unsafe { ExprLit::new_unchecked(&stringify) };
+
 					A::make_tree(
 						// The value is already ready to be used as a path.
 						exprlit,
+						point_track,
 						group.span(),
 						g_stream.span(),
 					)
@@ -305,6 +323,7 @@ where
 						// Can be `"Test"` or `'T'` (with actual quotes in the value)
 						// and may require character escaping to be handled.
 						slit,
+						point_track,
 						group.span(),
 						literal.span(),
 					)

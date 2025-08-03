@@ -34,7 +34,9 @@ macro_rules! test2_rules {
 		}
 	};
 
-	[$($tt:tt)+] => {
+	[
+		$($tt:tt)+
+	] => {
 		compile_error!(stringify!( $($tt)* ))
 	};
 	[] => []
@@ -43,9 +45,10 @@ macro_rules! test2_rules {
 fn main() {
 	// Loading trees from a file and substituting them into a custom macro.
 	include_tt! {
+		#POINT_TRACKER_FILES;
 		test2_rules! {
-			[#include!("./examples/full.tt")] // this file contains `a, b`.
-			[#include! { "./examples/full.tt"}] // this file contains `a, b`.
+			[ #include!("./examples/full.tt") ] // this file contains `a, b`.
+			[ #include! { "./examples/full.tt" } ] // this file contains `a, b`.
 		}
 		test2_rules! {
 			#include!("./examples/full.tt") // this file contains `a, b`.
