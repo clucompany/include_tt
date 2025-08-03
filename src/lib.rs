@@ -280,7 +280,7 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 									*/
 									if let Some(m_punct2) = iter.next() {
 										if let TokenTree2::Punct(punct2) = m_punct2 {
-											if punct2.as_char() == ';' {
+											if punct2.as_char() == ':' {
 												*point_track_file =
 													Some(PointTrack::new(*globalposnum, m_punct, m_ident, m_punct2));
 
@@ -290,7 +290,7 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 									}
 
 									throw_sg_err! {
-										return [ident.span()]: "`;` was expected."
+										return [ident.span()]: "`:` was expected."
 									}
 								}
 								ident if ident == "include" || ident == "include_tt" => {

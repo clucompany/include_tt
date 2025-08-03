@@ -8,7 +8,7 @@ macro_rules! __test_custom_path {
 				pub const a: usize = 0;
 				pub const b: usize = 10;
 
-				#POINT_TRACKER_FILES;
+				#POINT_TRACKER_FILES:
 				pub const $const_t: (usize, usize) = (#include!([$t1 $t2 $t3 $t4 $t5 $t6]));
 			}
 		}

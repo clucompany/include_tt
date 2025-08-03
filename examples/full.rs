@@ -45,7 +45,7 @@ macro_rules! test2_rules {
 fn main() {
 	// Loading trees from a file and substituting them into a custom macro.
 	inject! {
-		#POINT_TRACKER_FILES;
+		#POINT_TRACKER_FILES:
 		test2_rules! {
 			[ #include!("./examples/full.tt") ] // this file contains `a, b`.
 			[ #include! { "./examples/full.tt" } ] // this file contains `a, b`.
