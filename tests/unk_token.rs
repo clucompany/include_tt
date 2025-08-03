@@ -7,7 +7,7 @@ fn test_fix_unktoken() {
 	assert_eq!("\\".len(), 1);
 	inject! {
 		// File contains: `\ b = 30; \`
-		#ctt!("./tests/invalid_token.tt")
+		#ctt("./tests/invalid_token.tt")
 	}
 
 	assert_eq!(b, 30);

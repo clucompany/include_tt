@@ -5,21 +5,21 @@ fn test_empty_tt() {
 	inject! {
 		let tt = concat!(
 			// File contains: ``
-			#tt!("./tests/empty.tt") "Empty"
+			#tt("./tests/empty.tt") "Empty"
 		);
 		// File contains: ``
-		let str = #str!("./tests/empty.tt");
+		let str = #str("./tests/empty.tt");
 		// File contains: ``
-		let arr = #arr!("./tests/empty.tt");
+		let arr = #arr("./tests/empty.tt");
 
 		// empty path
 		let tt2 = concat!(
-			#tt!() "Empty"
+			#tt() "Empty"
 		);
 		// empty path
-		let str2 = #str!();
+		let str2 = #str();
 		// empty path
-		let arr2 = #arr!();
+		let arr2 = #arr();
 	}
 
 	assert_eq!(tt, "Empty");

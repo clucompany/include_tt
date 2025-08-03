@@ -55,7 +55,7 @@ use std::fmt::Write;
 			"arg1: {}, arg2: {}",
 
 			// This file contains `a, b`.
-			#tt!("./examples/full.tt") // this file contains `a, b`.
+			#tt("./examples/full.tt") // this file contains `a, b`.
 		);
 	}
 
@@ -66,7 +66,7 @@ use std::fmt::Write;
 {
 	// Loading a string from "full.tt" using inject! macro.
 	let str = inject!(
-		#str!("./examples/full.tt") // this file contains `a, b`.
+		#str("./examples/full.tt") // this file contains `a, b`.
 	);
 
 	// Asserting the result matches the expected output.
@@ -76,7 +76,7 @@ use std::fmt::Write;
 {
 	// Loading a array from "full.tt" using inject! macro.
 	let array: &'static [u8; 4] = inject!(
-		#arr!("./examples/full.tt") // this file contains `a, b`.
+		#arr("./examples/full.tt") // this file contains `a, b`.
 	);
 
 	// Asserting the result matches the expected output.
@@ -284,7 +284,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 				if let Some(m_ident) = iter.next() {
 					if let TokenTree2::Ident(ident) = m_ident {
 						#[allow(clippy::type_complexity)]
-						let macro_fn = match ident {
+						let macro_fn = match &*ident {
 							ident if ident == "AS_IS" => {
 								/*
 									Stop indexing after the given keyword. This saves resources.
@@ -359,28 +359,23 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 							}
 
 							_ => throw_sg_err! {
-								return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`, `include_and_break`, `include_tt_and_break`, `include_and_fix_unknown_start_token_and_break`, `include_tt_and_fix_unknown_start_token_and_break`, `include_str_and_break`, `include_arr_and_break`."
+								return [ident.span()]: "Unknown inclusion type, expected: `tt`, `ctt`, `arr`, `str`"
 							},
 						};
 
-						if let Some(m_punct2) = iter.next() {
-							if let TokenTree2::Punct(punct2) = m_punct2 {
-								if punct2.as_char() == '!' {
-									if let Some(m_group) = iter.next() {
-										if let TokenTree2::Group(group) = m_group {
-											let result =
-												tq!(macro_fn(group, point_track_file.as_mut()));
+						if let Some(m_group) = iter.next() {
+							if let TokenTree2::Group(group) = m_group {
+								let result = tq!(macro_fn(group, point_track_file.as_mut()));
 
-											*m_ident = make_null_group(m_ident.span());
-											*m_punct = make_null_group(m_punct.span());
-											*m_punct2 = make_null_group(m_punct2.span());
-											*m_group = result;
+								*m_ident = make_null_group(m_ident.span());
+								*m_punct = make_null_group(m_punct.span());
+								*m_group = result;
 
-											continue 'sbegin;
-										}
-									}
-								}
+								continue 'sbegin;
 							}
+						}
+						throw_sg_err! {
+							return [ident.span()]: "After this input, the group `()`, `[]`, `{}` is expected."
 						}
 					}
 				}
@@ -455,7 +450,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///				&mut end_str,
 ///
 ///				"arg1: {}, arg2: {}",
-///				#tt!("./examples/full.tt") // this file contains `a, b`.
+///				#tt("./examples/full.tt") // this file contains `a, b`.
 ///			);
 ///		}
 ///		assert_eq!(end_str, "arg1: 10, arg2: 20");
@@ -463,14 +458,14 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///
 /// {
 ///		let str = inject!(
-///			#str!("./examples/full.tt") // this file contains `a, b`.
+///			#str("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(str, "a, b");
 ///	}
 ///
 ///	{
 ///		let array: &'static [u8; 4] = inject!(
-///			#arr!("./examples/full.tt") // this file contains `a, b`.
+///			#arr("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(array, b"a, b");
 ///	}
