@@ -76,7 +76,7 @@ use std::fmt::Write;
 { 
 	// Loading a string from "full.tt" using inject! macro.
 	let str = inject!(
-		#include_str!("./for_examples/full.tt") // this file contains `a, b`.
+		#str!("./for_examples/full.tt") // this file contains `a, b`.
 	);
 	
 	// Asserting the result matches the expected output.
@@ -86,7 +86,7 @@ use std::fmt::Write;
 {
 	// Loading a array from "full.tt" using inject! macro.
 	let array: &'static [u8; 4] = inject!(
-		#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
+		#arr!("./for_examples/full.tt") // this file contains `a, b`.
 	);
 	
 	// Asserting the result matches the expected output.

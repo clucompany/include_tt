@@ -55,7 +55,7 @@ use std::fmt::Write;
 			"arg1: {}, arg2: {}",
 
 			// This file contains `a, b`.
-			#include!("./examples/full.tt") // this file contains `a, b`.
+			#tt!("./examples/full.tt") // this file contains `a, b`.
 		);
 	}
 
@@ -66,7 +66,7 @@ use std::fmt::Write;
 {
 	// Loading a string from "full.tt" using inject! macro.
 	let str = inject!(
-		#include_str!("./examples/full.tt") // this file contains `a, b`.
+		#str!("./examples/full.tt") // this file contains `a, b`.
 	);
 
 	// Asserting the result matches the expected output.
@@ -76,7 +76,7 @@ use std::fmt::Write;
 {
 	// Loading a array from "full.tt" using inject! macro.
 	let array: &'static [u8; 4] = inject!(
-		#include_arr!("./examples/full.tt") // this file contains `a, b`.
+		#arr!("./examples/full.tt") // this file contains `a, b`.
 	);
 
 	// Asserting the result matches the expected output.
@@ -455,7 +455,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///				&mut end_str,
 ///
 ///				"arg1: {}, arg2: {}",
-///				#include!("./examples/full.tt") // this file contains `a, b`.
+///				#tt!("./examples/full.tt") // this file contains `a, b`.
 ///			);
 ///		}
 ///		assert_eq!(end_str, "arg1: 10, arg2: 20");
@@ -463,14 +463,14 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///
 /// {
 ///		let str = inject!(
-///			#include_str!("./examples/full.tt") // this file contains `a, b`.
+///			#str!("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(str, "a, b");
 ///	}
 ///
 ///	{
 ///		let array: &'static [u8; 4] = inject!(
-///			#include_arr!("./examples/full.tt") // this file contains `a, b`.
+///			#arr!("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(array, b"a, b");
 ///	}
