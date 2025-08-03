@@ -2,7 +2,7 @@
 
   <b>[include_tt]</b>
   
-  (Macro for embedding (trees, strings, arrays) into macro trees directly from files.)
+  (Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources.)
   </br></br>
 
 <div id="badges">
@@ -51,46 +51,19 @@ use include_tt::inject;
 ```rust
 use include_tt::inject;
 use std::fmt::Write;
+fn main() {
+	let mut buf = String::new();
 
-// Example demonstrating the usage of inject! macro for embedding content from files.
-{ 
-	// Embedding trees from a file in an arbitrary place of other macros.
-	let a = 10;
-	let b = 20;
-	let mut end_str = String::new();
-	
-	// Using inject! to embed content into a macro.
 	inject! {
-		let _e = write!(
-			&mut end_str,
-			
-			"arg1: {}, arg2: {}",
-			#include!("./for_examples/full.tt") // this file contains `a, b`.
-		);
+		write!(
+			&mut buf,
+			"Welcome, {}. Your score is {}.",
+			#tt("examples/name.tt"),			// `"Ferris"`
+			#tt("examples/" "score" ".tt")	// `100500`
+		).unwrap();
 	}
-	
-	// Asserting the result matches the expected output.
-	assert_eq!(end_str, "arg1: 10, arg2: 20");
-}
 
-{ 
-	// Loading a string from "full.tt" using inject! macro.
-	let str = inject!(
-		#str("./for_examples/full.tt") // this file contains `a, b`.
-	);
-	
-	// Asserting the result matches the expected output.
-	assert_eq!(str, "a, b");
-}
-
-{
-	// Loading a array from "full.tt" using inject! macro.
-	let array: &'static [u8; 4] = inject!(
-		#arr("./for_examples/full.tt") // this file contains `a, b`.
-	);
-	
-	// Asserting the result matches the expected output.
-	assert_eq!(array, b"a, b");
+	assert_eq!(buf, "Welcome, Ferris. Your score is 100500.");
 }
 ```
 

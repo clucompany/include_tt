@@ -35,53 +35,23 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-/*! Macro for embedding (trees, strings, arrays) into macro trees directly from files.
+/*! Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources.
+
 ```rust
 use include_tt::inject;
 use std::fmt::Write;
+let mut buf = String::new();
 
-// Example demonstrating the usage of inject! macro for embedding content from files.
-{
-	// Embedding trees from a file in an arbitrary place of other macros.
-	let a = 10;
-	let b = 20;
-	let mut end_str = String::new();
-
-	// Using inject! to embed content into a macro.
-	inject! {
-		let _e = write!(
-			&mut end_str,
-
-			"arg1: {}, arg2: {}",
-
-			// This file contains `a, b`.
-			#tt("./examples/full.tt") // this file contains `a, b`.
-		);
-	}
-
-	// Asserting the result matches the expected output.
-	assert_eq!(end_str, "arg1: 10, arg2: 20");
+inject! {
+	write!(
+		&mut buf,
+		"Welcome, {}. Your score is {}!",
+		#tt("examples/name.tt"),			// `"Ferris"`
+		#tt("examples/" "score" ".tt")	// `100500`
+	).unwrap();
 }
 
-{
-	// Loading a string from "full.tt" using inject! macro.
-	let str = inject!(
-		#str("./examples/full.tt") // this file contains `a, b`.
-	);
-
-	// Asserting the result matches the expected output.
-	assert_eq!(str, "a, b");
-}
-
-{
-	// Loading a array from "full.tt" using inject! macro.
-	let array: &'static [u8; 4] = inject!(
-		#arr("./examples/full.tt") // this file contains `a, b`.
-	);
-
-	// Asserting the result matches the expected output.
-	assert_eq!(array, b"a, b");
-}
+assert_eq!(buf, "Welcome, Ferris. Your score is 100500!");
 ```
 */
 
@@ -432,43 +402,58 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 	SearchGroup::Break
 }
 
-/// Macro for including trees, strings, arrays from files.
-///
-/// Multiple occurrences of groups are supported.
-///
+/// Macro for injecting trees, strings, arrays from files.
+/// 
+/// ## template_macro
 /// ```rust
 /// use include_tt::inject;
 /// use std::fmt::Write;
+/// let mut buf = String::new();
+/// 
+/// inject! {
+/// 	write!(
+/// 		&mut buf,
+/// 		"Welcome, {}. Your score is {}!",
+/// 		#tt("examples/name.tt"),			// `"Ferris"`
+/// 		#tt("examples/" "score" ".tt")	// `100500`
+/// 	).unwrap();
+/// }
 ///
-/// { // Embedding compiler trees from a file in an arbitrary place of other macros.
-///		let a = 10;
-///		let b = 20;
-///
-///		let mut end_str = String::new();
-///		inject! {
-///			let _e = write!(
-///				&mut end_str,
-///
-///				"arg1: {}, arg2: {}",
-///				#tt("./examples/full.tt") // this file contains `a, b`.
-///			);
-///		}
-///		assert_eq!(end_str, "arg1: 10, arg2: 20");
-///	}
-///
-/// {
-///		let str = inject!(
-///			#str("./examples/full.tt") // this file contains `a, b`.
-///		);
-///		assert_eq!(str, "a, b");
-///	}
-///
-///	{
-///		let array: &'static [u8; 4] = inject!(
-///			#arr("./examples/full.tt") // this file contains `a, b`.
-///		);
-///		assert_eq!(array, b"a, b");
-///	}
+/// assert_eq!(buf, "Welcome, Ferris. Your score is 100500!");
+/// ```
+/// 
+/// ## basic_codegen
+/// 
+/// ```rust
+/// macro_rules! new_module {
+/// 	[ @($const_t: ident) : [ $($path:tt)* ]; ] => {
+/// 		include_tt::inject! {
+/// 			#[allow(dead_code)]
+/// 			#[allow(non_upper_case_globals)]
+/// 			pub mod my_module {
+/// 				pub const a: usize = 0;
+/// 				pub const b: usize = 10;
+/// 				
+/// 				// The `#POINT_TRACKER_FILES:` marker allows the macro to add additional 
+/// 				// instructions that tell the compiler which files to track so that it can 
+/// 				// recompile the macro if they change. This is completely optional, but without 
+/// 				// it tracking will not work.
+/// 				#POINT_TRACKER_FILES: 
+/// 				
+/// 				pub const $const_t: (usize, usize) = (#tt($($path)*));
+/// 			}
+/// 		}
+/// 	};
+/// }
+/// 
+/// // we created a module "my_module" and a constant "T" containing (a, b).
+/// //
+/// // if you need to change, for example, to (b,a) or substitute constant values,
+/// // we will only change the contents of the file "for_examples/full.tt"!
+/// new_module! {
+///	@(T): [examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
+/// }
+/// assert_eq!(my_module::T, (0, 10));
 /// ```
 #[proc_macro]
 pub fn inject(input: TokenStream) -> TokenStream {

@@ -7,9 +7,23 @@ repository = "https://github.com/clucompany/include_tt.git"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
-description = "Macro for embedding (trees, strings, arrays) into macro trees directly from files."
-keywords = ["procedural-macros", "macro", "code-generation", "code-transformation", "clucompany"]
-categories = ["development-tools", "development-tools::build-utils"]
+description = "Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources."
+keywords = [
+	"procedural-macros", 
+	"macro", 
+	"codegen", 
+	"syntax-injection", 
+	"tt-injection", 
+	"clucompany"
+]
+
+categories = [
+	"development-tools", 
+	"development-tools::build-utils", 
+	"development-tools::procedural-macro",
+	"code-generation", 
+	"parsing"
+]
 
 [features]
 default = [ ]
