@@ -95,7 +95,7 @@ use crate::trees::null::make_null_group;
 use crate::trees::throw_sg_err;
 use crate::{
 	include::{
-		IncludeArr, IncludeStr, IncludeTT, IncludeTTAndFixUnkStartToken, macro_rule_include,
+		InjectArr, InjectStr, InjectTT, InjectCTT, macro_rule_include,
 	},
 	trees::{
 		null::make_null_ttree,
@@ -314,18 +314,18 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 									}
 								}
 								ident if ident == "tt" => {
-									(false, macro_rule_include::<IncludeTT>)
+									(false, macro_rule_include::<InjectTT>)
 								}
 
 								ident if ident == "ctt" => {
-									(false, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
+									(false, macro_rule_include::<InjectCTT>)
 								}
 
 								ident if ident == "str" => {
-									(false, macro_rule_include::<IncludeStr>)
+									(false, macro_rule_include::<InjectStr>)
 								}
 								ident if ident == "arr" || ident == "array" => {
-									(false, macro_rule_include::<IncludeArr>)
+									(false, macro_rule_include::<InjectArr>)
 								}
 
 								ident if ident == "break" || ident == "BREAK" => {

@@ -36,9 +36,9 @@ pub trait BehMacroInclude {
 
 /// Easily include trees from a file in your
 /// final custom macro code.
-pub enum IncludeTT {}
+pub enum InjectTT {}
 
-impl BehMacroInclude for IncludeTT {
+impl BehMacroInclude for InjectTT {
 	type Result = TokenTree2;
 
 	#[inline]
@@ -75,9 +75,9 @@ impl BehMacroInclude for IncludeTT {
 /// invalid tokens breaking the parser.
 ///
 /// (Implemented specifically for C-like languages using `\` as a line code string)
-pub enum IncludeTTAndFixUnkStartToken {}
+pub enum InjectCTT {}
 
-impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
+impl BehMacroInclude for InjectCTT {
 	type Result = TokenTree2;
 
 	#[inline]
@@ -168,9 +168,9 @@ impl BehMacroInclude for IncludeTTAndFixUnkStartToken {
 
 /// Includes the entire file as a single line,
 /// similar to 'include_str'.
-pub enum IncludeStr {}
+pub enum InjectStr {}
 
-impl BehMacroInclude for IncludeStr {
+impl BehMacroInclude for InjectStr {
 	type Result = TokenTree2;
 
 	fn make_empty_tree(group_span: Span) -> Self::Result {
@@ -214,9 +214,9 @@ impl BehMacroInclude for IncludeStr {
 
 /// Includes the entire file as a binary array,
 /// similar to 'include_str'.
-pub enum IncludeArr {}
+pub enum InjectArr {}
 
-impl BehMacroInclude for IncludeArr {
+impl BehMacroInclude for InjectArr {
 	type Result = TokenTree2;
 
 	fn make_empty_tree(group_span: Span) -> Self::Result {
