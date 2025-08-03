@@ -3,6 +3,7 @@ use proc_macro2::{Delimiter, Group, Span, TokenStream as TokenStream2, TokenTree
 /// Create an empty tree that does not affect the target tree.
 ///
 /// Typically used to avoid deleting tree elements and replacing them with voids.
+#[allow(dead_code)]
 pub fn make_null_ttree() -> TokenTree2 {
 	let ngroup = Group::new(Delimiter::None, TokenStream2::new());
 

@@ -1,10 +1,11 @@
-use include_tt::include_tt;
+use include_tt::inject;
 
 #[test]
 fn test_expr_lit() {
-	let str = include_tt! {
+	let str = inject! {
 		// File contains: `"123\"test"`
-		#include_and_break!("./tests/expr_lit.tt")
+		#tt("./tests/expr_lit.tt")
+		#break;
 	};
 
 	assert_eq!(str, "123\"test");

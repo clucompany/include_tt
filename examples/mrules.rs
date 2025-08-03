@@ -1,4 +1,4 @@
-use include_tt::include_tt;
+use include_tt::inject;
 
 macro_rules! test_rules {
 	[
@@ -35,14 +35,14 @@ fn main() {
 	let a = 10;
 	let b = 20;
 
-	include_tt! {
+	inject! {
 		// this macro only supports:
 		// a + b = n
 		// or
 		// a - b = n
-		#POINT_TRACKER_FILES;
+		#POINT_TRACKER_FILES:
 		test_rules! {
-			#include!("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
+			#tt("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
 		}
 	}
 	assert_eq!(n, a + b);

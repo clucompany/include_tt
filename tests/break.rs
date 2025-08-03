@@ -1,9 +1,9 @@
-use include_tt::include_tt;
+use include_tt::inject;
 
 #[test]
 fn test_empty_tt() {
-	let str = include_tt! {
-		#include!("./tests/empty.tt")
+	let str = inject! {
+		#tt("./tests/empty.tt")
 		/*
 			The use of this keyword leaves the search for occurrences
 			needed for replacement.

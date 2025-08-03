@@ -35,53 +35,23 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-/*! Macro for embedding (trees, strings, arrays) into macro trees directly from files.
+/*! Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources.
+
 ```rust
-use include_tt::include_tt;
+use include_tt::inject;
 use std::fmt::Write;
+let mut buf = String::new();
 
-// Example demonstrating the usage of include_tt! macro for embedding content from files.
-{
-	// Embedding trees from a file in an arbitrary place of other macros.
-	let a = 10;
-	let b = 20;
-	let mut end_str = String::new();
-
-	// Using include_tt! to embed content into a macro.
-	include_tt! {
-		let _e = write!(
-			&mut end_str,
-
-			"arg1: {}, arg2: {}",
-
-			// This file contains `a, b`.
-			#include!("./examples/full.tt") // this file contains `a, b`.
-		);
-	}
-
-	// Asserting the result matches the expected output.
-	assert_eq!(end_str, "arg1: 10, arg2: 20");
+inject! {
+	write!(
+		&mut buf,
+		"Welcome, {}. Your score is {}!",
+		#tt("examples/name.tt"),			// `"Ferris"`
+		#tt("examples/" "score" ".tt")	// `100500`
+	).unwrap();
 }
 
-{
-	// Loading a string from "full.tt" using include_tt! macro.
-	let str = include_tt!(
-		#include_str!("./examples/full.tt") // this file contains `a, b`.
-	);
-
-	// Asserting the result matches the expected output.
-	assert_eq!(str, "a, b");
-}
-
-{
-	// Loading a array from "full.tt" using include_tt! macro.
-	let array: &'static [u8; 4] = include_tt!(
-		#include_arr!("./examples/full.tt") // this file contains `a, b`.
-	);
-
-	// Asserting the result matches the expected output.
-	assert_eq!(array, b"a, b");
-}
+assert_eq!(buf, "Welcome, Ferris. Your score is 100500!");
 ```
 */
 
@@ -94,11 +64,8 @@ extern crate proc_macro;
 use crate::trees::null::make_null_group;
 use crate::trees::throw_sg_err;
 use crate::{
-	include::{
-		IncludeArr, IncludeStr, IncludeTT, IncludeTTAndFixUnkStartToken, macro_rule_include,
-	},
+	include::{InjectArr, InjectCTT, InjectStr, InjectTT, macro_rule_include},
 	trees::{
-		null::make_null_ttree,
 		replace::{replace_tree_in_group, replace_tree_in_stream},
 		result::TreeResult,
 		search::SearchGroup,
@@ -150,7 +117,7 @@ pub(crate) struct PointTrack<'tk> {
 impl<'tk> PointTrack<'tk> {
 	#[inline]
 	pub const fn new(
-		globalposnum: usize, 
+		globalposnum: usize,
 		prefix_token: &'tk mut TokenTree2,
 		name_token: &'tk mut TokenTree2,
 		data_token: &'tk mut TokenTree2,
@@ -163,22 +130,22 @@ impl<'tk> PointTrack<'tk> {
 			globalposnum,
 		}
 	}
-	
+
 	#[inline]
 	pub fn prefix_span(&self) -> Span {
 		self.prefix_token.span()
 	}
-	
+
 	#[inline]
 	pub fn name_span(&self) -> Span {
 		self.name_token.span()
 	}
-	
+
 	#[inline]
 	pub fn data_span(&self) -> Span {
 		self.data_token.span()
 	}
-	
+
 	#[inline]
 	pub const fn is_rewritten(&self) -> bool {
 		self.appends_files > 0
@@ -258,133 +225,127 @@ impl<'tk> Drop for PointTrack<'tk> {
 /// and perform useful work specific to the selected macro.
 ///
 /// The design of this feature has been adapted to search for attachments.
-fn search_include_and_replacegroup<'tk, 'gpsn>(
+fn autoinject_tt_in_group<'tk, 'gpsn>(
 	globalposnum: &'gpsn mut usize,
 	mut iter: IterMut<'tk, TokenTree2>,
 	point_track_file: &'_ mut Option<PointTrack<'tk>>,
 ) -> SearchGroup {
 	'sbegin: while let Some(m_punct) = iter.next() {
 		match m_punct {
+			#[cfg(feature = "escape_symbol")]
+			TokenTree2::Punct(punct) if punct.as_char() == '-' => {
+				/*
+					Just a way to escape `#` to prevent the macro from parsing `#` and executing it.
+
+					(Making `\`, `_` didn't work at this point)
+				*/
+				let mut is_allow_skip_atree = false;
+				if let Some(TokenTree2::Punct(punct)) = iter.next() {
+					if punct.as_char() == '#' {
+						is_allow_skip_atree = true
+					}
+				}
+				if is_allow_skip_atree {
+					*m_punct = make_null_group(m_punct.span());
+				}
+				continue 'sbegin;
+			}
 			TokenTree2::Punct(punct) if punct.as_char() == '#' => {
 				if let Some(m_ident) = iter.next() {
 					if let TokenTree2::Ident(ident) = m_ident {
 						#[allow(clippy::type_complexity)]
-						let (is_add_auto_break, macro_fn): (
-							bool,
-							fn(&Group, Option<&mut PointTrack<'tk>>) -> TreeResult<TokenTree2>,
-						) = {
-							match ident {
-								ident if ident == "POINT_TRACKER_FILES" => {
-									/*
-										Stop indexing after the given keyword. This saves resources.
-									*/
-									if let Some(m_punct2) = iter.next() {
-										if let TokenTree2::Punct(punct2) = m_punct2 {
-											if punct2.as_char() == ';' {
-												*point_track_file =
-													Some(PointTrack::new(*globalposnum, m_punct, m_ident, m_punct2));
+						let macro_fn = match &*ident {
+							ident if ident == "AS_IS" => {
+								/*
+									Stop indexing after the given keyword. This saves resources.
+								*/
+								if let Some(m_punct2) = iter.next() {
+									if let TokenTree2::Punct(punct2) = m_punct2 {
+										if punct2.as_char() == ':' {
+											*m_ident = make_null_group(m_ident.span());
+											*m_punct = make_null_group(m_punct.span());
+											*m_punct2 = make_null_group(m_punct2.span());
 
-												continue 'sbegin;
-											}
+											return SearchGroup::Break;
 										}
 									}
-
-									throw_sg_err! {
-										return [ident.span()]: "`;` was expected."
-									}
-								}
-								ident if ident == "include" || ident == "include_tt" => {
-									(false, macro_rule_include::<IncludeTT>)
-								}
-								ident
-									if ident == "include_and_break"
-										|| ident == "include_tt+break" =>
-								{
-									(true, macro_rule_include::<IncludeTT>)
 								}
 
-								ident
-									if ident == "include_and_fix_unknown_start_token"
-										|| ident == "include_tt_and_fix_unknown_start_token" =>
-								{
-									(false, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
+								throw_sg_err! {
+									return [ident.span()]: "`:` was expected."
 								}
-								ident
-									if ident == "include_and_fix_unknown_start_token_and_break"
-										|| ident
-											== "include_tt_and_fix_unknown_start_token_and_break" =>
-								{
-									(true, macro_rule_include::<IncludeTTAndFixUnkStartToken>)
-								}
-
-								ident if ident == "include_str" => {
-									(false, macro_rule_include::<IncludeStr>)
-								}
-								ident if ident == "include_str_and_break" => {
-									(true, macro_rule_include::<IncludeStr>)
-								}
-								ident if ident == "include_arr" => {
-									(false, macro_rule_include::<IncludeArr>)
-								}
-								ident if ident == "include_arr_and_break" => {
-									(true, macro_rule_include::<IncludeArr>)
-								}
-
-								ident
-									if ident == "break"
-										|| ident == "BREAK" || ident == "break_search_macro" =>
-								{
-									/*
-										Stop indexing after the given keyword. This saves resources.
-									*/
-									if let Some(m_punct2) = iter.next() {
-										if let TokenTree2::Punct(punct2) = m_punct2 {
-											if punct2.as_char() == ';' {
-												let nulltt = make_null_ttree();
-
-												*m_ident = nulltt.clone();
-												*m_punct = nulltt.clone();
-												*m_punct2 = nulltt;
-
-												return SearchGroup::Break;
-											}
-										}
-									}
-
-									throw_sg_err! {
-										return [ident.span()]: "`;` was expected."
-									}
-								}
-
-								_ => throw_sg_err! {
-									return [ident.span()]: "Unknown macro, expected `include`, `include_tt`, `include_and_fix_unknown_start_token`, `include_tt_and_fix_unknown_start_token`, `include_str`, `include_arr`, `include_and_break`, `include_tt_and_break`, `include_and_fix_unknown_start_token_and_break`, `include_tt_and_fix_unknown_start_token_and_break`, `include_str_and_break`, `include_arr_and_break`."
-								},
 							}
+							ident if ident == "POINT_TRACKER_FILES" => {
+								if let Some(m_punct2) = iter.next() {
+									if let TokenTree2::Punct(punct2) = m_punct2 {
+										if punct2.as_char() == ':' {
+											*point_track_file = Some(PointTrack::new(
+												*globalposnum,
+												m_punct,
+												m_ident,
+												m_punct2,
+											));
+
+											continue 'sbegin;
+										}
+									}
+								}
+
+								throw_sg_err! {
+									return [ident.span()]: "`:` was expected."
+								}
+							}
+							ident if ident == "tt" => {
+								macro_rule_include::<InjectTT>
+									as fn(
+										&Group,
+										Option<&mut PointTrack<'tk>>,
+									) -> TreeResult<TokenTree2>
+							}
+							ident if ident == "ctt" => macro_rule_include::<InjectCTT> as _,
+							ident if ident == "str" => macro_rule_include::<InjectStr> as _,
+							ident if ident == "arr" || ident == "array" => {
+								macro_rule_include::<InjectArr> as _
+							}
+							ident if ident == "break" => {
+								/*
+									Stop indexing after the given keyword. This saves resources.
+								*/
+								if let Some(m_punct2) = iter.next() {
+									if let TokenTree2::Punct(punct2) = m_punct2 {
+										if punct2.as_char() == ';' {
+											*m_ident = make_null_group(m_ident.span());
+											*m_punct = make_null_group(m_punct.span());
+											*m_punct2 = make_null_group(m_punct2.span());
+
+											return SearchGroup::Break;
+										}
+									}
+								}
+
+								throw_sg_err! {
+									return [ident.span()]: "`;` was expected."
+								}
+							}
+
+							_ => throw_sg_err! {
+								return [ident.span()]: "Undefined action to include data in macro or change its behavior, expected macro data type: `tt`, `ctt`, `arr`, `str`, or marker: `#AS_IS:`, `#POINT_TRACKER_FILES:`, or stop parsing macro via `#break;`."
+							},
 						};
 
-						if let Some(m_punct2) = iter.next() {
-							if let TokenTree2::Punct(punct2) = m_punct2 {
-								if punct2.as_char() == '!' {
-									if let Some(m_group) = iter.next() {
-										if let TokenTree2::Group(group) = m_group {
-											let result =
-												tq!(macro_fn(group, point_track_file.as_mut()));
+						if let Some(m_group) = iter.next() {
+							if let TokenTree2::Group(group) = m_group {
+								let result = tq!(macro_fn(group, point_track_file.as_mut()));
 
-											let nulltt = make_null_ttree();
+								*m_ident = make_null_group(m_ident.span());
+								*m_punct = make_null_group(m_punct.span());
+								*m_group = result;
 
-											*m_ident = nulltt.clone();
-											*m_punct = nulltt.clone();
-											*m_punct2 = nulltt.clone();
-											*m_group = result;
-
-											match is_add_auto_break {
-												false => continue 'sbegin,
-												true => return SearchGroup::Break,
-											}
-										}
-									}
-								}
+								continue 'sbegin;
 							}
+						}
+						throw_sg_err! {
+							return [ident.span()]: "After this input, the group `()`, `[]`, `{}` is expected."
 						}
 					}
 				}
@@ -402,19 +363,24 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 						namegroup = make_null_group(point_track_file.name_span());
 						datagroup = make_null_group(point_track_file.data_span());
 
-						PointTrack::new(*globalposnum, &mut prefixgroup, &mut namegroup, &mut datagroup)
+						PointTrack::new(
+							*globalposnum,
+							&mut prefixgroup,
+							&mut namegroup,
+							&mut datagroup,
+						)
 					}),
 					None => None,
 				};
 
-				let result = search_include_and_replacegroup(globalposnum, iter, &mut ptf);
+				let result = autoinject_tt_in_group(globalposnum, iter, &mut ptf);
 				if let Some(ptf) = ptf {
 					if ptf.is_rewritten() {
 						if let Some(point_track_file) = point_track_file {
 							match ptf.into_token_tree2() {
 								Some((appends_files, TokenTree2::Group(group))) => {
 									*globalposnum += appends_files;
-									
+
 									point_track_file.append_track_files_ts(group.stream());
 								}
 								_ => panic!(
@@ -436,50 +402,65 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 	SearchGroup::Break
 }
 
-/// Macro for including trees, strings, arrays from files.
-///
-/// Multiple occurrences of groups are supported.
-///
+/// Macro for injecting trees, strings, arrays from files.
+/// 
+/// ## template_macro
 /// ```rust
-/// use include_tt::include_tt;
+/// use include_tt::inject;
 /// use std::fmt::Write;
+/// let mut buf = String::new();
+/// 
+/// inject! {
+/// 	write!(
+/// 		&mut buf,
+/// 		"Welcome, {}. Your score is {}!",
+/// 		#tt("examples/name.tt"),			// `"Ferris"`
+/// 		#tt("examples/" "score" ".tt")	// `100500`
+/// 	).unwrap();
+/// }
 ///
-/// { // Embedding compiler trees from a file in an arbitrary place of other macros.
-///		let a = 10;
-///		let b = 20;
-///
-///		let mut end_str = String::new();
-///		include_tt! {
-///			let _e = write!(
-///				&mut end_str,
-///
-///				"arg1: {}, arg2: {}",
-///				#include!("./examples/full.tt") // this file contains `a, b`.
-///			);
-///		}
-///		assert_eq!(end_str, "arg1: 10, arg2: 20");
-///	}
-///
-/// {
-///		let str = include_tt!(
-///			#include_str!("./examples/full.tt") // this file contains `a, b`.
-///		);
-///		assert_eq!(str, "a, b");
-///	}
-///
-///	{
-///		let array: &'static [u8; 4] = include_tt!(
-///			#include_arr!("./examples/full.tt") // this file contains `a, b`.
-///		);
-///		assert_eq!(array, b"a, b");
-///	}
+/// assert_eq!(buf, "Welcome, Ferris. Your score is 100500!");
+/// ```
+/// 
+/// ## basic_codegen
+/// 
+/// ```rust
+/// macro_rules! new_module {
+/// 	[ @($const_t: ident) : [ $($path:tt)* ]; ] => {
+/// 		include_tt::inject! {
+/// 			#[allow(dead_code)]
+/// 			#[allow(non_upper_case_globals)]
+/// 			pub mod my_module {
+/// 				pub const a: usize = 0;
+/// 				pub const b: usize = 10;
+/// 				
+/// 				// The `#POINT_TRACKER_FILES:` marker allows the macro to add additional 
+/// 				// instructions that tell the compiler which files to track so that it can 
+/// 				// recompile the macro if they change. This is completely optional, but without 
+/// 				// it tracking will not work.
+/// 				#POINT_TRACKER_FILES: 
+/// 				
+/// 				pub const $const_t: (usize, usize) = (#tt($($path)*));
+/// 			}
+/// 		}
+/// 	};
+/// }
+/// 
+/// // we created a module "my_module" and a constant "T" containing (a, b).
+/// //
+/// // if you need to change, for example, to (b,a) or substitute constant values,
+/// // we will only change the contents of the file "for_examples/full.tt"!
+/// new_module! {
+///	@(T): [examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
+/// }
+/// assert_eq!(my_module::T, (0, 10));
 /// ```
 #[proc_macro]
-pub fn include_tt(input: TokenStream) -> TokenStream {
+pub fn inject(input: TokenStream) -> TokenStream {
 	let mut tt: TokenStream2 = input.into();
 
 	match replace_tree_in_stream(&mut tt, |iter| {
-		search_include_and_replacegroup(&mut 0, iter, &mut None)
+		autoinject_tt_in_group(&mut 0, iter, &mut None)
 	}) {
 		SearchGroup::Error(e) => e.into(),
 		SearchGroup::Break => tt.into(),
