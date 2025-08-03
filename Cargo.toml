@@ -11,7 +11,6 @@ description = "Macros for ultra-flexible injection of compiler trees, literals, 
 keywords = [
 	"procedural-macros", 
 	"macro", 
-	"codegen", 
 	"syntax-injection", 
 	"tt-injection", 
 	"clucompany"
