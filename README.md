@@ -37,7 +37,7 @@ Add this to your Cargo.toml:
 
 ```toml
 [dependencies]
-include_tt = "1.0.5"
+include_tt = "1.0.7"
 ```
 
 and this to your source code:
