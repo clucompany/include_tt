@@ -1,8 +1,8 @@
-use include_tt::include_tt;
+use include_tt::inject;
 
 #[test]
 fn test_empty_tt() {
-	include_tt! {
+	inject! {
 		let tt = concat!(
 			// File contains: ``
 			#include!("./tests/empty.tt") "Empty"

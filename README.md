@@ -43,24 +43,24 @@ include_tt = "1.0.7"
 and this to your source code:
 
 ```rust
-use include_tt::include_tt;
+use include_tt::inject;
 ```
 
 ## Example
 
 ```rust
-use include_tt::include_tt;
+use include_tt::inject;
 use std::fmt::Write;
 
-// Example demonstrating the usage of include_tt! macro for embedding content from files.
+// Example demonstrating the usage of inject! macro for embedding content from files.
 { 
 	// Embedding trees from a file in an arbitrary place of other macros.
 	let a = 10;
 	let b = 20;
 	let mut end_str = String::new();
 	
-	// Using include_tt! to embed content into a macro.
-	include_tt! {
+	// Using inject! to embed content into a macro.
+	inject! {
 		let _e = write!(
 			&mut end_str,
 			
@@ -74,8 +74,8 @@ use std::fmt::Write;
 }
 
 { 
-	// Loading a string from "full.tt" using include_tt! macro.
-	let str = include_tt!(
+	// Loading a string from "full.tt" using inject! macro.
+	let str = inject!(
 		#include_str!("./for_examples/full.tt") // this file contains `a, b`.
 	);
 	
@@ -84,8 +84,8 @@ use std::fmt::Write;
 }
 
 {
-	// Loading a array from "full.tt" using include_tt! macro.
-	let array: &'static [u8; 4] = include_tt!(
+	// Loading a array from "full.tt" using inject! macro.
+	let array: &'static [u8; 4] = inject!(
 		#include_arr!("./for_examples/full.tt") // this file contains `a, b`.
 	);
 	

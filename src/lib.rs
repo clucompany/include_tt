@@ -37,18 +37,18 @@
 
 /*! Macro for embedding (trees, strings, arrays) into macro trees directly from files.
 ```rust
-use include_tt::include_tt;
+use include_tt::inject;
 use std::fmt::Write;
 
-// Example demonstrating the usage of include_tt! macro for embedding content from files.
+// Example demonstrating the usage of inject! macro for embedding content from files.
 {
 	// Embedding trees from a file in an arbitrary place of other macros.
 	let a = 10;
 	let b = 20;
 	let mut end_str = String::new();
 
-	// Using include_tt! to embed content into a macro.
-	include_tt! {
+	// Using inject! to embed content into a macro.
+	inject! {
 		let _e = write!(
 			&mut end_str,
 
@@ -64,8 +64,8 @@ use std::fmt::Write;
 }
 
 {
-	// Loading a string from "full.tt" using include_tt! macro.
-	let str = include_tt!(
+	// Loading a string from "full.tt" using inject! macro.
+	let str = inject!(
 		#include_str!("./examples/full.tt") // this file contains `a, b`.
 	);
 
@@ -74,8 +74,8 @@ use std::fmt::Write;
 }
 
 {
-	// Loading a array from "full.tt" using include_tt! macro.
-	let array: &'static [u8; 4] = include_tt!(
+	// Loading a array from "full.tt" using inject! macro.
+	let array: &'static [u8; 4] = inject!(
 		#include_arr!("./examples/full.tt") // this file contains `a, b`.
 	);
 
@@ -441,7 +441,7 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 /// Multiple occurrences of groups are supported.
 ///
 /// ```rust
-/// use include_tt::include_tt;
+/// use include_tt::inject;
 /// use std::fmt::Write;
 ///
 /// { // Embedding compiler trees from a file in an arbitrary place of other macros.
@@ -449,7 +449,7 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 ///		let b = 20;
 ///
 ///		let mut end_str = String::new();
-///		include_tt! {
+///		inject! {
 ///			let _e = write!(
 ///				&mut end_str,
 ///
@@ -461,21 +461,21 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 ///	}
 ///
 /// {
-///		let str = include_tt!(
+///		let str = inject!(
 ///			#include_str!("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(str, "a, b");
 ///	}
 ///
 ///	{
-///		let array: &'static [u8; 4] = include_tt!(
+///		let array: &'static [u8; 4] = inject!(
 ///			#include_arr!("./examples/full.tt") // this file contains `a, b`.
 ///		);
 ///		assert_eq!(array, b"a, b");
 ///	}
 /// ```
 #[proc_macro]
-pub fn include_tt(input: TokenStream) -> TokenStream {
+pub fn inject(input: TokenStream) -> TokenStream {
 	let mut tt: TokenStream2 = input.into();
 
 	match replace_tree_in_stream(&mut tt, |iter| {

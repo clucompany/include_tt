@@ -1,4 +1,4 @@
-use include_tt::include_tt;
+use include_tt::inject;
 
 macro_rules! test_rules {
 	[
@@ -35,7 +35,7 @@ fn main() {
 	let a = 10;
 	let b = 20;
 
-	include_tt! {
+	inject! {
 		// this macro only supports:
 		// a + b = n
 		// or

@@ -1,4 +1,4 @@
-use include_tt::include_tt;
+use include_tt::inject;
 use std::fmt::Write;
 
 macro_rules! test2_rules {
@@ -44,7 +44,7 @@ macro_rules! test2_rules {
 
 fn main() {
 	// Loading trees from a file and substituting them into a custom macro.
-	include_tt! {
+	inject! {
 		#POINT_TRACKER_FILES;
 		test2_rules! {
 			[ #include!("./examples/full.tt") ] // this file contains `a, b`.
@@ -65,13 +65,13 @@ fn main() {
 
 	{
 		// Loading a string from a file.
-		let str = include_tt!(#include_str!("./examples/full.tt")); // this file contains `a, b`.
+		let str = inject!(#include_str!("./examples/full.tt")); // this file contains `a, b`.
 		assert_eq!(str, "a, b");
 	}
 
 	{
 		// Loading an array from a file.
-		let array: &'static [u8; 4] = include_tt!(
+		let array: &'static [u8; 4] = inject!(
 			#include_arr!("./examples/full.tt") // this file contains `a, b`.
 		);
 		assert_eq!(array, b"a, b");
@@ -83,7 +83,7 @@ fn main() {
 		let b = 20;
 
 		let mut end_str = String::new();
-		include_tt! {
+		inject! {
 			let _e = write!(
 				&mut end_str,
 

@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! __test_custom_path {
 	[ @($const_t: ident) : [$t1:tt $t2:tt $t3:tt $t4:tt $t5:tt $t6:tt]; ] => {
-		include_tt::include_tt! {
+		include_tt::inject! {
 			#[allow(dead_code)]
 			#[allow(non_upper_case_globals)]
 			pub mod ttest {
