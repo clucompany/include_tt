@@ -17,10 +17,8 @@ keywords = [
 ]
 
 categories = [
-	"development-tools", 
-	"development-tools::build-utils", 
-	"development-tools::procedural-macro",
-	"code-generation", 
+	"development-tools",
+	"development-tools::build-utils",
 	"parsing"
 ]
 
