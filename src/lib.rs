@@ -94,11 +94,8 @@ extern crate proc_macro;
 use crate::trees::null::make_null_group;
 use crate::trees::throw_sg_err;
 use crate::{
-	include::{
-		InjectArr, InjectStr, InjectTT, InjectCTT, macro_rule_include,
-	},
+	include::{InjectArr, InjectCTT, InjectStr, InjectTT, macro_rule_include},
 	trees::{
-		null::make_null_ttree,
 		replace::{replace_tree_in_group, replace_tree_in_stream},
 		result::TreeResult,
 		search::SearchGroup,
@@ -150,7 +147,7 @@ pub(crate) struct PointTrack<'tk> {
 impl<'tk> PointTrack<'tk> {
 	#[inline]
 	pub const fn new(
-		globalposnum: usize, 
+		globalposnum: usize,
 		prefix_token: &'tk mut TokenTree2,
 		name_token: &'tk mut TokenTree2,
 		data_token: &'tk mut TokenTree2,
@@ -163,22 +160,22 @@ impl<'tk> PointTrack<'tk> {
 			globalposnum,
 		}
 	}
-	
+
 	#[inline]
 	pub fn prefix_span(&self) -> Span {
 		self.prefix_token.span()
 	}
-	
+
 	#[inline]
 	pub fn name_span(&self) -> Span {
 		self.name_token.span()
 	}
-	
+
 	#[inline]
 	pub fn data_span(&self) -> Span {
 		self.data_token.span()
 	}
-	
+
 	#[inline]
 	pub const fn is_rewritten(&self) -> bool {
 		self.appends_files > 0
@@ -282,12 +279,10 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 										#[allow(clippy::collapsible_match)]
 										if let TokenTree2::Punct(punct2) = m_punct2 {
 											if punct2.as_char() == ':' {
-												let nulltt = make_null_ttree();
+												*m_ident = make_null_group(m_ident.span());
+												*m_punct = make_null_group(m_punct.span());
+												*m_punct2 = make_null_group(m_punct2.span());
 
-												*m_ident = nulltt.clone();
-												*m_punct = nulltt.clone();
-												*m_punct2 = nulltt;
-												
 												return SearchGroup::Break;
 											}
 										}
@@ -301,8 +296,12 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 									if let Some(m_punct2) = iter.next() {
 										if let TokenTree2::Punct(punct2) = m_punct2 {
 											if punct2.as_char() == ':' {
-												*point_track_file =
-													Some(PointTrack::new(*globalposnum, m_punct, m_ident, m_punct2));
+												*point_track_file = Some(PointTrack::new(
+													*globalposnum,
+													m_punct,
+													m_ident,
+													m_punct2,
+												));
 
 												continue 'sbegin;
 											}
@@ -313,33 +312,22 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 										return [ident.span()]: "`:` was expected."
 									}
 								}
-								ident if ident == "tt" => {
-									(false, macro_rule_include::<InjectTT>)
-								}
-
-								ident if ident == "ctt" => {
-									(false, macro_rule_include::<InjectCTT>)
-								}
-
-								ident if ident == "str" => {
-									(false, macro_rule_include::<InjectStr>)
-								}
+								ident if ident == "tt" => (false, macro_rule_include::<InjectTT>),
+								ident if ident == "ctt" => (false, macro_rule_include::<InjectCTT>),
+								ident if ident == "str" => (false, macro_rule_include::<InjectStr>),
 								ident if ident == "arr" || ident == "array" => {
 									(false, macro_rule_include::<InjectArr>)
 								}
-
-								ident if ident == "break" || ident == "BREAK" => {
+								ident if ident == "break" => {
 									/*
 										Stop indexing after the given keyword. This saves resources.
 									*/
 									if let Some(m_punct2) = iter.next() {
 										if let TokenTree2::Punct(punct2) = m_punct2 {
 											if punct2.as_char() == ';' {
-												let nulltt = make_null_ttree();
-
-												*m_ident = nulltt.clone();
-												*m_punct = nulltt.clone();
-												*m_punct2 = nulltt;
+												*m_ident = make_null_group(m_ident.span());
+												*m_punct = make_null_group(m_punct.span());
+												*m_punct2 = make_null_group(m_punct2.span());
 
 												return SearchGroup::Break;
 											}
@@ -365,11 +353,9 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 											let result =
 												tq!(macro_fn(group, point_track_file.as_mut()));
 
-											let nulltt = make_null_ttree();
-
-											*m_ident = nulltt.clone();
-											*m_punct = nulltt.clone();
-											*m_punct2 = nulltt.clone();
+											*m_ident = make_null_group(m_ident.span());
+											*m_punct = make_null_group(m_punct.span());
+											*m_punct2 = make_null_group(m_punct2.span());
 											*m_group = result;
 
 											match is_add_auto_break {
@@ -397,7 +383,12 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 						namegroup = make_null_group(point_track_file.name_span());
 						datagroup = make_null_group(point_track_file.data_span());
 
-						PointTrack::new(*globalposnum, &mut prefixgroup, &mut namegroup, &mut datagroup)
+						PointTrack::new(
+							*globalposnum,
+							&mut prefixgroup,
+							&mut namegroup,
+							&mut datagroup,
+						)
 					}),
 					None => None,
 				};
@@ -409,7 +400,7 @@ fn search_include_and_replacegroup<'tk, 'gpsn>(
 							match ptf.into_token_tree2() {
 								Some((appends_files, TokenTree2::Group(group))) => {
 									*globalposnum += appends_files;
-									
+
 									point_track_file.append_track_files_ts(group.stream());
 								}
 								_ => panic!(
