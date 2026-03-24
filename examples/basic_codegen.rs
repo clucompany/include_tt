@@ -6,13 +6,13 @@ macro_rules! new_module {
 			pub mod my_module {
 				pub const a: usize = 0;
 				pub const b: usize = 10;
-				
-				// The `#POINT_TRACKER_FILES:` marker allows the macro to add additional 
-				// instructions that tell the compiler which files to track so that it can 
-				// recompile the macro if they change. This is completely optional, but without 
+
+				// The `#POINT_TRACKER_FILES:` marker allows the macro to add additional
+				// instructions that tell the compiler which files to track so that it can
+				// recompile the macro if they change. This is completely optional, but without
 				// it tracking will not work.
-				#POINT_TRACKER_FILES: 
-				
+				#POINT_TRACKER_FILES:
+
 				pub const $const_t: (usize, usize) = (#tt($($path)*));
 			}
 		}

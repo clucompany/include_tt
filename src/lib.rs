@@ -251,6 +251,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 				continue 'sbegin;
 			}
 			TokenTree2::Punct(punct) if punct.as_char() == '#' => {
+				#[allow(clippy::collapsible_if)]
 				if let Some(m_ident) = iter.next() {
 					if let TokenTree2::Ident(ident) = m_ident {
 						#[allow(clippy::type_complexity)]
@@ -374,6 +375,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 				};
 
 				let result = autoinject_tt_in_group(globalposnum, iter, &mut ptf);
+				#[allow(clippy::collapsible_if)]
 				if let Some(ptf) = ptf {
 					if ptf.is_rewritten() {
 						if let Some(point_track_file) = point_track_file {
@@ -403,13 +405,13 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 }
 
 /// Macro for injecting trees, strings, arrays from files.
-/// 
+///
 /// ## template_macro
 /// ```rust
 /// use include_tt::inject;
 /// use std::fmt::Write;
 /// let mut buf = String::new();
-/// 
+///
 /// inject! {
 /// 	write!(
 /// 		&mut buf,
@@ -421,9 +423,9 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///
 /// assert_eq!(buf, "Welcome, Ferris. Your score is 100500!");
 /// ```
-/// 
+///
 /// ## basic_codegen
-/// 
+///
 /// ```rust
 /// macro_rules! new_module {
 /// 	[ @($const_t: ident) : [ $($path:tt)* ]; ] => {
@@ -433,19 +435,19 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 /// 			pub mod my_module {
 /// 				pub const a: usize = 0;
 /// 				pub const b: usize = 10;
-/// 				
-/// 				// The `#POINT_TRACKER_FILES:` marker allows the macro to add additional 
-/// 				// instructions that tell the compiler which files to track so that it can 
-/// 				// recompile the macro if they change. This is completely optional, but without 
+///
+/// 				// The `#POINT_TRACKER_FILES:` marker allows the macro to add additional
+/// 				// instructions that tell the compiler which files to track so that it can
+/// 				// recompile the macro if they change. This is completely optional, but without
 /// 				// it tracking will not work.
-/// 				#POINT_TRACKER_FILES: 
-/// 				
+/// 				#POINT_TRACKER_FILES:
+///
 /// 				pub const $const_t: (usize, usize) = (#tt($($path)*));
 /// 			}
 /// 		}
 /// 	};
 /// }
-/// 
+///
 /// // we created a module "my_module" and a constant "T" containing (a, b).
 /// //
 /// // if you need to change, for example, to (b,a) or substitute constant values,
