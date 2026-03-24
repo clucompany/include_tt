@@ -27,10 +27,10 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 	/// Convert an error to a syntax tree.
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
 		match self {
-			Self::ReadToString { err, path } => throw_sg_err! {
+			Self::ReadToString { err, path } => sq_err! {
 				[span]: "Error loading file, err: '", #{err:?}, "', path: ", #{path:?}, "."
 			},
-			Self::ParseStr(e) => throw_sg_err! {
+			Self::ParseStr(e) => sq_err! {
 				[span]: "Failed to convert to tree `tt`: '", #{e:?}, "'."
 			}
 		}

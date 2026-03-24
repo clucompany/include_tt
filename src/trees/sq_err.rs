@@ -1,16 +1,16 @@
 /// A small macro that allows you to create an error tree and either
 /// return it to the calling function or break it in a loop
-macro_rules! throw_sg_err {
+macro_rules! sq_err {
 	// return macro `compile_error!`.
 	[ return $($tt:tt)* ] => {
-		return throw_sg_err! {
+		return sq_err! {
 			$($tt)*
 		}
 	};
 
 	// break macro `compile_error!` with a concatenator.
 	[ break $($tt:tt)* ] => {
-		break throw_sg_err! {
+		break sq_err! {
 			$($tt)*
 		}
 	};
@@ -25,11 +25,11 @@ macro_rules! throw_sg_err {
 
 	// macro `compile_error!` with a concatenator.
 	[ [$span:expr]: $($err:tt)+ ] => {{
-		$crate::trees::__throw_sg_err_format!(
+		$crate::trees::__sq_err_format!(
 			@let_block: in[ $($err)+ ]
 		);
 
-		$crate::trees::__throw_sg_err_format!(
+		$crate::trees::__sq_err_format!(
 			quote::quote_spanned! {
 				$span =>
 				compile_error!(
@@ -40,14 +40,14 @@ macro_rules! throw_sg_err {
 	}};
 }
 
-macro_rules! __throw_sg_err_format {
+macro_rules! __sq_err_format {
 	[
 		@let_block:
 		in[ # {$n:ident :?} $($all:tt)* ]
 	] => {
 		let $n = format!("{:?}", $n);
 
-		$crate::trees::__throw_sg_err_format! {
+		$crate::trees::__sq_err_format! {
 			@let_block:
 			in [ $($all)* ]
 		}
@@ -59,7 +59,7 @@ macro_rules! __throw_sg_err_format {
 	] => {
 		let $n = format!("{}", $n);
 
-		$crate::trees::__throw_sg_err_format! {
+		$crate::trees::__sq_err_format! {
 			@let_block:
 			in [ $($all)* ]
 		}
@@ -69,7 +69,7 @@ macro_rules! __throw_sg_err_format {
 		@let_block:
 		in[ $_t:tt $($all:tt)* ]
 	] => {
-		$crate::trees::__throw_sg_err_format! {
+		$crate::trees::__sq_err_format! {
 			@let_block:
 			in [ $($all)* ]
 		}
@@ -90,7 +90,7 @@ macro_rules! __throw_sg_err_format {
 			))
 		}
 	] => {
-		$crate::trees::__throw_sg_err_format! {
+		$crate::trees::__sq_err_format! {
 			quote::quote_spanned! {
 				$span =>
 				compile_error!(concat!(
@@ -110,7 +110,7 @@ macro_rules! __throw_sg_err_format {
 			))
 		}
 	] => {
-		$crate::trees::__throw_sg_err_format! {
+		$crate::trees::__sq_err_format! {
 			quote::quote_spanned! {
 				$span =>
 				compile_error!(concat!(
@@ -130,7 +130,7 @@ macro_rules! __throw_sg_err_format {
 			))
 		}
 	] => {
-		$crate::trees::__throw_sg_err_format! {
+		$crate::trees::__sq_err_format! {
 			quote::quote_spanned! {
 				$span =>
 				compile_error!(concat!(

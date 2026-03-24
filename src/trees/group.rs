@@ -1,4 +1,4 @@
-use crate::{TreeResult, exprs::literal::ExprLit, throw_sg_err, trees::tq};
+use crate::{TreeResult, exprs::literal::ExprLit, sq_err, trees::tq};
 use alloc::{
 	fmt::Write,
 	format,
@@ -42,14 +42,14 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		}
 		TokenTree2::Ident(i) => {
 			if let Err(e) = write!(w, "{}", i) {
-				throw_sg_err! {
+				sq_err! {
 					return [i.span()]: "Ident, ", #{e:?}
 				}
 			}
 		}
 		TokenTree2::Punct(p) => {
 			if let Err(e) = w.write_char(p.as_char()) {
-				throw_sg_err! {
+				sq_err! {
 					return [p.span()]: "Punct, ", #{e:?}
 				}
 			}
@@ -59,7 +59,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 				&l.to_string(),
 				|sspath| match write!(w, "{}", sspath) {
 					Ok(..) => TreeResult::Ok(()),
-					Err(e) => throw_sg_err! {
+					Err(e) => sq_err! {
 						return [l.span()]: "Literal, ", #{e:?}
 					}
 				},
@@ -67,7 +67,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 					let span = l.span();
 					let debug = e.into_tt_err(span);
 
-					throw_sg_err! {
+					sq_err! {
 						return [span]: "Literal, ", #debug
 					}
 				},

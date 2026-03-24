@@ -1,4 +1,4 @@
-use crate::throw_sg_err;
+use crate::sq_err;
 use core::{
 	fmt::{Debug, Display},
 	ops::Deref,
@@ -52,10 +52,10 @@ impl ExprLitTryNewErr {
 	#[inline]
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
 		match self {
-			Self::ExpLen { current, exp } => throw_sg_err! {
+			Self::ExpLen { current, exp } => sq_err! {
 				[span]: "More char expected, current: ", #current, "exp: {}", #exp, "."
 			},
-			Self::ExpQuotes => throw_sg_err! {
+			Self::ExpQuotes => sq_err! {
 				[span]: "Double quotes were expected."
 			},
 		}

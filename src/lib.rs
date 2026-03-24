@@ -62,7 +62,7 @@ extern crate alloc;
 extern crate proc_macro;
 
 use crate::trees::null::make_null_group;
-use crate::trees::throw_sg_err;
+use crate::trees::sq_err;
 use crate::{
 	include::{InjectArr, InjectCTT, InjectStr, InjectTT, macro_rule_include},
 	trees::{
@@ -92,11 +92,12 @@ pub(crate) mod trees {
 	pub(crate) use tq;
 
 	#[macro_use]
-	pub mod sq_err;
+	#[path = "sq_err.rs"]
+	mod _sq_err;
 	#[allow(clippy::single_component_path_imports)]
-	pub(crate) use __throw_sg_err_format;
+	pub(crate) use __sq_err_format;
 	#[allow(clippy::single_component_path_imports)]
-	pub(crate) use throw_sg_err;
+	pub(crate) use sq_err;
 	pub mod loader;
 }
 
@@ -272,7 +273,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 								return SearchGroup::Break;
 							}
 
-							throw_sg_err! {
+							sq_err! {
 								return [ident.span()]: "`:` was expected."
 							}
 						}
@@ -291,7 +292,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 								continue 'sbegin;
 							}
 
-							throw_sg_err! {
+							sq_err! {
 								return [ident.span()]: "`:` was expected."
 							}
 						}
@@ -322,12 +323,12 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 								return SearchGroup::Break;
 							}
 
-							throw_sg_err! {
+							sq_err! {
 								return [ident.span()]: "`;` was expected."
 							}
 						}
 
-						_ => throw_sg_err! {
+						_ => sq_err! {
 							return [ident.span()]: "Undefined action to include data in macro or change its behavior, expected macro data type: `tt`, `ctt`, `arr`, `str`, or marker: `#AS_IS:`, `#POINT_TRACKER_FILES:`, or stop parsing macro via `#break;`."
 						},
 					};
@@ -344,7 +345,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 						continue 'sbegin;
 					}
 
-					throw_sg_err! {
+					sq_err! {
 						return [ident.span()]: "After this input, the group `()`, `[]`, `{}` is expected."
 					}
 				}
