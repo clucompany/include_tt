@@ -49,7 +49,6 @@ impl ExprLitTryNewErr {
 	}
 
 	/// Convert an error to a syntax tree.
-	#[inline]
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
 		match self {
 			Self::ExpLen { current, exp } => sq_err! {

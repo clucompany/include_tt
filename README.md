@@ -37,7 +37,7 @@ Add this to your Cargo.toml:
 
 ```toml
 [dependencies]
-include_tt = "1.1.0"
+include_tt = "1.1.1"
 ```
 
 and this to your source code:
@@ -79,7 +79,7 @@ This project has a dual license according to (LICENSE-MIT) and (LICENSE-APACHE-2
   <a href="https://github.com/denisandroid">
     <img align="left" src="https://github.com/UlinProject/img/blob/main/block_220_100/uproject.png?raw=true" alt="uproject"/>
   </a>
-  <b>&nbsp;Copyright (c) 2023-2025 #UlinProject</b>
+  <b>&nbsp;Copyright (c) 2023-2026 #UlinProject</b>
 	
   <b>&nbsp;(Denis Kotlyarov).</b>
   </br></br></br>
