@@ -42,17 +42,15 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		}
 		TokenTree2::Ident(i) => {
 			if let Err(e) = write!(w, "{}", i) {
-				let debug = format!("{e:?}");
 				throw_sg_err! {
-					return [i.span()]: "Ident, ", #debug
+					return [i.span()]: "Ident, ", #{e:?}
 				}
 			}
 		}
 		TokenTree2::Punct(p) => {
 			if let Err(e) = w.write_char(p.as_char()) {
-				let debug = format!("{e:?}");
 				throw_sg_err! {
-					return [p.span()]: "Punct, ", #debug
+					return [p.span()]: "Punct, ", #{e:?}
 				}
 			}
 		}
@@ -61,11 +59,8 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 				&l.to_string(),
 				|sspath| match write!(w, "{}", sspath) {
 					Ok(..) => TreeResult::Ok(()),
-					Err(e) => {
-						let debug = format!("{e:?}");
-						throw_sg_err! {
-							return [l.span()]: "Literal, ", #debug
-						}
+					Err(e) => throw_sg_err! {
+						return [l.span()]: "Literal, ", #{e:?}
 					}
 				},
 				|e| {

@@ -27,18 +27,11 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 	/// Convert an error to a syntax tree.
 	pub fn into_tt_err(self, span: Span) -> TokenStream2 {
 		match self {
-			Self::ReadToString { err, path } => {
-				let spath = format!("{path:?}"); // TODO REFACTORME
-				let se = format!("{err:?}");
-				throw_sg_err! {
-					[span]: "Error loading file, err: '", #se, "', path: ", #spath, "."
-				}
-			}
-			Self::ParseStr(e) => {
-				let se = format!("{e:?}");
-				throw_sg_err! {
-					[span]: "Failed to convert to tree `tt`: '", #se, "'."
-				}
+			Self::ReadToString { err, path } => throw_sg_err! {
+				[span]: "Error loading file, err: '", #{err:?}, "', path: ", #{path:?}, "."
+			},
+			Self::ParseStr(e) => throw_sg_err! {
+				[span]: "Failed to convert to tree `tt`: '", #{e:?}, "'."
 			}
 		}
 	}
@@ -90,8 +83,9 @@ pub fn load_file_and_automake_tree_with_fns<'path, R>(
 
 	prepare_file_str(&mut data);
 
-	match syn::parse_str(&data) {
-		Ok(a) => next(Some(a)),
+	match syn::parse_str::<TokenStream2>(&data) {
+		Ok(a) if !a.is_empty() => next(Some(a)),
+		Ok(_) => next(None),
 		Err(e) => err(LoadFileAndAutoMakeTreeErr::ParseStr(e)),
 	}
 }

@@ -50,9 +50,8 @@ impl BehMacroInclude for InjectTT {
 
 		span: Span,
 	) -> TreeResult<Self::Result> {
-		let path = Path::new(sspath.as_str());
 		load_file_and_automake_tree_with_fns(
-			path,
+			Path::new(sspath.as_str()),
 			point_track,
 			|_| {}, /* skip_prepare */
 			|fs_tt| {
@@ -88,9 +87,8 @@ impl BehMacroInclude for InjectCTT {
 
 		span: Span,
 	) -> TreeResult<Self::Result> {
-		let sspath = Path::new(sspath);
 		load_file_and_automake_tree_with_fns(
-			sspath,
+			Path::new(sspath),
 			point_track,
 			|p_string| {
 				/* fix unk start token */

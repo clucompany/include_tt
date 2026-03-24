@@ -24,11 +24,136 @@ macro_rules! throw_sg_err {
 	};
 
 	// macro `compile_error!` with a concatenator.
-	[ [$span:expr]: $($err:tt)+ ] => {
+	[ [$span:expr]: $($err:tt)+ ] => {{
+		$crate::trees::__throw_sg_err_format!(
+			@let_block: in[ $($err)+ ]
+		);
+
+		$crate::trees::__throw_sg_err_format!(
+			quote::quote_spanned! {
+				$span =>
+				compile_error!(
+					concat!( in[ $($err)+ ] args[] )
+				)
+			}
+		)
+	}};
+}
+
+macro_rules! __throw_sg_err_format {
+	[
+		@let_block:
+		in[ # {$n:ident :?} $($all:tt)* ]
+	] => {
+		let $n = format!("{:?}", $n);
+
+		$crate::trees::__throw_sg_err_format! {
+			@let_block:
+			in [ $($all)* ]
+		}
+	};
+	
+	[
+		@let_block:
+		in[ # {$n:ident} $($all:tt)* ]
+	] => {
+		let $n = format!("{}", $n);
+
+		$crate::trees::__throw_sg_err_format! {
+			@let_block:
+			in [ $($all)* ]
+		}
+	};
+
+	[
+		@let_block:
+		in[ $_t:tt $($all:tt)* ]
+	] => {
+		$crate::trees::__throw_sg_err_format! {
+			@let_block:
+			in [ $($all)* ]
+		}
+	};
+
+	[ // END
+		@let_block:
+		in[]
+	] => {};
+
+
+	[ // {:?}
+		quote::quote_spanned! {
+			$span:expr =>
+			compile_error!(concat!(
+				in[ # {$n:ident :?} $($all:tt)* ]
+				args[ $($args:tt)* ]
+			))
+		}
+	] => {
+		$crate::trees::__throw_sg_err_format! {
+			quote::quote_spanned! {
+				$span =>
+				compile_error!(concat!(
+					in[ $($all)* ]
+					args[ $($args)* # $n ]
+				))
+			}
+		}
+	};
+	
+	[ // {}
+		quote::quote_spanned! {
+			$span:expr =>
+			compile_error!(concat!(
+				in[ # {$n:ident} $($all:tt)* ]
+				args[ $($args:tt)* ]
+			))
+		}
+	] => {
+		$crate::trees::__throw_sg_err_format! {
+			quote::quote_spanned! {
+				$span =>
+				compile_error!(concat!(
+					in[ $($all)* ]
+					args[ $($args)* # $n ]
+				))
+			}
+		}
+	};
+
+	[
+		quote::quote_spanned! {
+			$span:expr =>
+			compile_error!(concat!(
+				in[ $t:tt $($all:tt)* ]
+				args[ $($args:tt)* ]
+			))
+		}
+	] => {
+		$crate::trees::__throw_sg_err_format! {
+			quote::quote_spanned! {
+				$span =>
+				compile_error!(concat!(
+					in[ $($all)* ]
+					args[ $($args)* $t ]
+				))
+			}
+		}
+	};
+
+	[ // END
+		quote::quote_spanned! {
+			$span:expr =>
+			compile_error!(concat!(
+				in[ ]
+				args[ $($args:tt)* ]
+			))
+		}
+	] => {
 		quote::quote_spanned! {
 			$span =>
 			compile_error!(
-				concat!( $($err)+ )
+				concat!( $($args)* )
 			);
 		}.into()
 	};

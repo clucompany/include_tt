@@ -94,6 +94,8 @@ pub(crate) mod trees {
 	#[macro_use]
 	pub mod sq_err;
 	#[allow(clippy::single_component_path_imports)]
+	pub(crate) use __throw_sg_err_format;
+	#[allow(clippy::single_component_path_imports)]
 	pub(crate) use throw_sg_err;
 	pub mod loader;
 }
