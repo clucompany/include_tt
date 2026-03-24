@@ -41,7 +41,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 			}
 		}
 		TokenTree2::Ident(i) => {
-			if let Err(e) = w.write_str(&i.to_string()) {
+			if let Err(e) = write!(w, "{}", i) {
 				let debug = format!("{e:?}");
 				throw_sg_err! {
 					return [i.span()]: "Ident, ", #debug
@@ -59,7 +59,7 @@ fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
 		TokenTree2::Literal(l) => {
 			return ExprLit::try_new_with_fns(
 				&l.to_string(),
-				|sspath| match w.write_str(sspath) {
+				|sspath| match write!(w, "{}", sspath) {
 					Ok(..) => TreeResult::Ok(()),
 					Err(e) => {
 						let debug = format!("{e:?}");

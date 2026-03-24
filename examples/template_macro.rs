@@ -1,5 +1,6 @@
 use include_tt::inject;
 use std::fmt::Write;
+
 fn main() {
 	let mut buf = String::new();
 
