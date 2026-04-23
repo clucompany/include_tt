@@ -35,7 +35,15 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-/*! Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources.
+//! # include_tt
+//!
+//! Macros for ultra-flexible injection of token trees, literals, or binary data
+//! into Rust syntax trees from external sources.
+//!
+//! This crate allows you to compose file paths dynamically and include their
+//! content as tokens, strings, or byte arrays directly into your source code.
+
+/*!
 
 ```rust
 use include_tt::inject;
@@ -400,9 +408,24 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
     SearchGroup::Break
 }
 
-/// Macro for injecting trees, strings, arrays from files.
+/// Ultra-flexible macro for compile-time injection of token trees, strings, or byte arrays from files.
 ///
-/// ## template_macro
+/// It scans the input for `#marker(...)` patterns, composes the file path, and replaces
+/// the marker with the file's content before the Rust compiler processes the code.
+///
+/// ### Available Markers:
+/// * `#tt(...)` — Injects content as raw Rust tokens.
+/// * `#ctt(...)` — **Clean TT**: Same as `#tt`, but pre-processes the file to replace C-style
+///   line continuations (`\` followed by whitespace) with spaces.
+/// * `#str(...)` — Injects content as a `&'static str`.
+/// * `#arr(...)` or `#array(...)` — Injects content as a `&'static [u8]`.
+///
+/// ### Control & Optimization:
+/// * `#POINT_TRACKER_FILES:` — Enables incremental compilation tracking for all included files.
+/// * `#AS_IS:` or `#break;` — Stops parsing the rest of the macro input to save compile time.
+/// * `-#` — Escapes the `#` symbol so it is ignored by `inject!` (e.g., for attributes).
+///
+/// ## Example: Template-like injection
 /// ```rust
 /// use include_tt::inject;
 /// use std::fmt::Write;
@@ -412,30 +435,24 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///     write!(
 ///         &mut buf,
 ///         "Welcome, {}. Your score is {}!",
-///         #tt("examples/name.tt"),            // `"Ferris"`
-///         #tt("examples/" "score" ".tt")      // `100500`
+///         #tt("examples/name.tt"),            // contents: `"Ferris"`
+///         #tt("examples/" "score" ".tt")      // contents: `100500`
 ///     ).unwrap();
 /// }
-///
 /// assert_eq!(buf, "Welcome, Ferris. Your score is 100500!");
 /// ```
 ///
-/// ## basic_codegen
-///
+/// ## Example: Advanced Codegen & Tracking
 /// ```rust
 /// macro_rules! new_module {
 ///     [ @($const_t: ident) : [ $($path:tt)* ]; ] => {
 ///         include_tt::inject! {
 ///             #[allow(dead_code)]
-///             #[allow(non_upper_case_globals)]
 ///             pub mod my_module {
 ///                 pub const a: usize = 0;
 ///                 pub const b: usize = 10;
 ///
-///                 // The `#POINT_TRACKER_FILES:` marker allows the macro to add additional
-///                 // instructions that tell the compiler which files to track so that it can
-///                 // recompile the macro if they change. This is completely optional, but without
-///                 // it tracking will not work.
+///                 // Track changes in external files for incremental compilation
 ///                 #POINT_TRACKER_FILES:
 ///
 ///                 pub const $const_t: (usize, usize) = (#tt($($path)*));
@@ -444,12 +461,8 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ///     };
 /// }
 ///
-/// // we created a module "my_module" and a constant "T" containing (a, b).
-/// //
-/// // if you need to change, for example, to (b,a) or substitute constant values,
-/// // we will only change the contents of the file "for_examples/full.tt"!
 /// new_module! {
-///    @(T): [examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
+///    @(T): [examples / "full" . t 't']; // file contains: a, b
 /// }
 /// assert_eq!(my_module::T, (0, 10));
 /// ```

@@ -2,7 +2,7 @@
 
   <b>[include_tt]</b>
   
-  (Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources.)
+  (Macros for ultra-flexible injection of token trees, literals, or binary data into Rust code from external files during compilation.)
   </br></br>
 
 <div id="badges">

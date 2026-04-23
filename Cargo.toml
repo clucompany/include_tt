@@ -7,7 +7,7 @@ repository = "https://github.com/clucompany/include_tt.git"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
-description = "Macros for ultra-flexible injection of compiler trees, literals, or binary data into Rust syntax trees from external sources."
+description = "Macros for ultra-flexible injection of token trees, literals, or binary data into Rust code from external files during compilation."
 keywords = [
 	"procedural-macros",
 	"macro",
