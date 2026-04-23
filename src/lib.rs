@@ -240,167 +240,170 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
     mut iter: IterMut<'tk, TokenTree2>,
     point_track_file: &'_ mut Option<PointTrack<'tk>>,
 ) -> SearchGroup {
-    'sbegin: while let Some(m_punct) = iter.next() {
-        match m_punct {
-            TokenTree2::Punct(punct) if punct.as_char() == '-' => {
-                /*
-                    Just a way to escape `#` to prevent the macro from parsing `#` and executing it.
-
-                    (Making `\`, `_` didn't work at this point)
-                */
-                let mut is_allow_skip_atree = false;
-                if let Some(TokenTree2::Punct(punct)) = iter.next()
-                    && punct.as_char() == '#'
-                {
-                    is_allow_skip_atree = true
-                }
-                if is_allow_skip_atree {
-                    *m_punct = make_null_group(m_punct.span());
-                }
-                continue 'sbegin;
-            }
-            TokenTree2::Punct(punct) if punct.as_char() == '#' => {
-                if let Some(m_ident) = iter.next()
-                    && let TokenTree2::Ident(ident) = m_ident
-                {
-                    let macro_fn = match &*ident {
-                        ident if ident == "AS_IS" => {
-                            /*
-                                Stop indexing after the given keyword. This saves resources.
-                            */
-                            if let Some(m_punct2) = iter.next()
-                                && let TokenTree2::Punct(punct2) = m_punct2
-                                && punct2.as_char() == ':'
-                            {
-                                *m_ident = make_null_group(m_ident.span());
-                                *m_punct = make_null_group(m_punct.span());
-                                *m_punct2 = make_null_group(m_punct2.span());
-
-                                return SearchGroup::Break;
-                            }
-
-                            sq_err! {
-                                return [ident.span()]: "`:` was expected."
-                            }
-                        }
-                        ident if ident == "POINT_TRACKER_FILES" => {
-                            if let Some(m_punct2) = iter.next()
-                                && let TokenTree2::Punct(punct2) = m_punct2
-                                && punct2.as_char() == ':'
-                            {
-                                *point_track_file = Some(PointTrack::new(
-                                    *globalposnum,
-                                    m_punct,
-                                    m_ident,
-                                    m_punct2,
-                                ));
-
-                                continue 'sbegin;
-                            }
-
-                            sq_err! {
-                                return [ident.span()]: "`:` was expected."
-                            }
-                        }
-                        ident if ident == "tt" => {
-                            macro_rule_include::<InjectTT>
-                                as fn(
-                                    &Group,
-                                    Option<&mut PointTrack<'tk>>,
-                                ) -> TreeResult<TokenTree2>
-                        }
-                        ident if ident == "ctt" => macro_rule_include::<InjectCTT> as _,
-                        ident if ident == "str" => macro_rule_include::<InjectStr> as _,
-                        ident if ident == "arr" || ident == "array" => {
-                            macro_rule_include::<InjectArr> as _
-                        }
-                        ident if ident == "break" => {
-                            /*
-                                Stop indexing after the given keyword. This saves resources.
-                            */
-                            if let Some(m_punct2) = iter.next()
-                                && let TokenTree2::Punct(punct2) = m_punct2
-                                && punct2.as_char() == ';'
-                            {
-                                *m_ident = make_null_group(m_ident.span());
-                                *m_punct = make_null_group(m_punct.span());
-                                *m_punct2 = make_null_group(m_punct2.span());
-
-                                return SearchGroup::Break;
-                            }
-
-                            sq_err! {
-                                return [ident.span()]: "`;` was expected."
-                            }
-                        }
-
-                        _ => sq_err! {
-                            return [ident.span()]: "Undefined action to include data in macro or change its behavior, expected macro data type: `tt`, `ctt`, `arr`, `str`, or marker: `#AS_IS:`, `#POINT_TRACKER_FILES:`, or stop parsing macro via `#break;`."
-                        },
+    'sbegin: while let Some(mut m_punct) = iter.next() {
+        'match_m_punct: loop {
+            match m_punct {
+                TokenTree2::Punct(punct) if punct.as_char() == '-' => {
+                    // Just a way to escape `#` to prevent the macro from parsing `#` and executing it.
+                    let iter_next = match iter.next() {
+                        Some(a) => a,
+                        None => break 'sbegin,
                     };
-
-                    if let Some(m_group) = iter.next()
-                        && let TokenTree2::Group(group) = m_group
+                    if let TokenTree2::Punct(punct) = iter_next
+                        && punct.as_char() == '#'
                     {
-                        let result = tq!(macro_fn(group, point_track_file.as_mut()));
-
-                        *m_ident = make_null_group(m_ident.span());
                         *m_punct = make_null_group(m_punct.span());
-                        *m_group = result;
-
                         continue 'sbegin;
                     }
 
-                    sq_err! {
-                        return [ident.span()]: "After this input, the group `()`, `[]`, `{}` is expected."
-                    }
+                    m_punct = iter_next;
+                    continue 'match_m_punct;
                 }
-            }
-            // If this is a group, then you need to go down inside the
-            // group and look for the necessary macros there.
-            TokenTree2::Group(group) => match replace_tree_in_group(group, |iter| {
-                let mut prefixgroup;
-                let mut namegroup;
-                let mut datagroup;
-                #[allow(clippy::manual_map)] // see ngroup
-                let mut ptf = match point_track_file {
-                    Some(point_track_file) => Some({
-                        prefixgroup = make_null_group(point_track_file.prefix_span());
-                        namegroup = make_null_group(point_track_file.name_span());
-                        datagroup = make_null_group(point_track_file.data_span());
+                TokenTree2::Punct(punct) if punct.as_char() == '#' => {
+                    if let Some(m_ident) = iter.next()
+                        && let TokenTree2::Ident(ident) = m_ident
+                    {
+                        let macro_fn = match &*ident {
+                            ident if ident == "AS_IS" => {
+                                /*
+                                    Stop indexing after the given keyword. This saves resources.
+                                */
+                                if let Some(m_punct2) = iter.next()
+                                    && let TokenTree2::Punct(punct2) = m_punct2
+                                    && punct2.as_char() == ':'
+                                {
+                                    *m_ident = make_null_group(m_ident.span());
+                                    *m_punct = make_null_group(m_punct.span());
+                                    *m_punct2 = make_null_group(m_punct2.span());
 
-                        PointTrack::new(
-                            *globalposnum,
-                            &mut prefixgroup,
-                            &mut namegroup,
-                            &mut datagroup,
-                        )
-                    }),
-                    None => None,
-                };
+                                    return SearchGroup::Break;
+                                }
 
-                let result = autoinject_tt_in_group(globalposnum, iter, &mut ptf);
-                if let Some(ptf) = ptf
-                    && ptf.is_rewritten()
-                    && let Some(point_track_file) = point_track_file
-                {
-                    match ptf.into_token_tree2() {
-                        Some((appends_files, TokenTree2::Group(group))) => {
-                            *globalposnum += appends_files;
+                                sq_err! {
+                                    return [ident.span()]: "`:` was expected."
+                                }
+                            }
+                            ident if ident == "POINT_TRACKER_FILES" => {
+                                if let Some(m_punct2) = iter.next()
+                                    && let TokenTree2::Punct(punct2) = m_punct2
+                                    && punct2.as_char() == ':'
+                                {
+                                    *point_track_file = Some(PointTrack::new(
+                                        *globalposnum,
+                                        m_punct,
+                                        m_ident,
+                                        m_punct2,
+                                    ));
 
-                            point_track_file.append_track_files_ts(group.stream());
+                                    continue 'sbegin;
+                                }
+
+                                sq_err! {
+                                    return [ident.span()]: "`:` was expected."
+                                }
+                            }
+                            ident if ident == "tt" => {
+                                macro_rule_include::<InjectTT>
+                                    as fn(
+                                        &Group,
+                                        Option<&mut PointTrack<'tk>>,
+                                    )
+                                        -> TreeResult<TokenTree2>
+                            }
+                            ident if ident == "ctt" => macro_rule_include::<InjectCTT> as _,
+                            ident if ident == "str" => macro_rule_include::<InjectStr> as _,
+                            ident if ident == "arr" || ident == "array" => {
+                                macro_rule_include::<InjectArr> as _
+                            }
+                            ident if ident == "break" => {
+                                /*
+                                    Stop indexing after the given keyword. This saves resources.
+                                */
+                                if let Some(m_punct2) = iter.next()
+                                    && let TokenTree2::Punct(punct2) = m_punct2
+                                    && punct2.as_char() == ';'
+                                {
+                                    *m_ident = make_null_group(m_ident.span());
+                                    *m_punct = make_null_group(m_punct.span());
+                                    *m_punct2 = make_null_group(m_punct2.span());
+
+                                    return SearchGroup::Break;
+                                }
+
+                                sq_err! {
+                                    return [ident.span()]: "`;` was expected."
+                                }
+                            }
+
+                            _ => sq_err! {
+                                return [ident.span()]: "Undefined action to include data in macro or change its behavior, expected macro data type: `tt`, `ctt`, `arr`, `str`, or marker: `#AS_IS:`, `#POINT_TRACKER_FILES:`, or stop parsing macro via `#break;`."
+                            },
+                        };
+
+                        if let Some(m_group) = iter.next()
+                            && let TokenTree2::Group(group) = m_group
+                        {
+                            let result = tq!(macro_fn(group, point_track_file.as_mut()));
+
+                            *m_ident = make_null_group(m_ident.span());
+                            *m_punct = make_null_group(m_punct.span());
+                            *m_group = result;
+
+                            continue 'sbegin;
                         }
-                        _ => panic!(
-                            "Undefined behavior reported in `PointTrack`, someone redefined `TokenTree2`, expected `TokenTree2::Group`"
-                        ),
+
+                        sq_err! {
+                            return [ident.span()]: "After this input, the group `()`, `[]`, `{}` is expected."
+                        }
                     }
                 }
-                result
-            }) {
-                SearchGroup::Break => continue 'sbegin,
-                result @ SearchGroup::Error(..) => return result,
-            },
-            _ => {}
+                // If this is a group, then you need to go down inside the
+                // group and look for the necessary macros there.
+                TokenTree2::Group(group) => match replace_tree_in_group(group, |iter| {
+                    let mut prefixgroup;
+                    let mut namegroup;
+                    let mut datagroup;
+                    #[allow(clippy::manual_map)] // see ngroup
+                    let mut ptf = match point_track_file {
+                        Some(point_track_file) => Some({
+                            prefixgroup = make_null_group(point_track_file.prefix_span());
+                            namegroup = make_null_group(point_track_file.name_span());
+                            datagroup = make_null_group(point_track_file.data_span());
+
+                            PointTrack::new(
+                                *globalposnum,
+                                &mut prefixgroup,
+                                &mut namegroup,
+                                &mut datagroup,
+                            )
+                        }),
+                        None => None,
+                    };
+
+                    let result = autoinject_tt_in_group(globalposnum, iter, &mut ptf);
+                    if let Some(ptf) = ptf
+                        && ptf.is_rewritten()
+                        && let Some(point_track_file) = point_track_file
+                    {
+                        match ptf.into_token_tree2() {
+                            Some((appends_files, TokenTree2::Group(group))) => {
+                                *globalposnum += appends_files;
+
+                                point_track_file.append_track_files_ts(group.stream());
+                            }
+                            _ => panic!(
+                                "Undefined behavior reported in `PointTrack`, someone redefined `TokenTree2`, expected `TokenTree2::Group`"
+                            ),
+                        }
+                    }
+                    result
+                }) {
+                    SearchGroup::Break => continue 'sbegin,
+                    result @ SearchGroup::Error(..) => return result,
+                },
+                _ => {}
+            }
+            break 'match_m_punct;
         }
     }
 
