@@ -242,7 +242,6 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
 ) -> SearchGroup {
     'sbegin: while let Some(m_punct) = iter.next() {
         match m_punct {
-            #[cfg(feature = "escape_symbol")]
             TokenTree2::Punct(punct) if punct.as_char() == '-' => {
                 /*
                     Just a way to escape `#` to prevent the macro from parsing `#` and executing it.
@@ -250,10 +249,10 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
                     (Making `\`, `_` didn't work at this point)
                 */
                 let mut is_allow_skip_atree = false;
-                if let Some(TokenTree2::Punct(punct)) = iter.next() {
-                    if punct.as_char() == '#' {
-                        is_allow_skip_atree = true
-                    }
+                if let Some(TokenTree2::Punct(punct)) = iter.next()
+                    && punct.as_char() == '#'
+                {
+                    is_allow_skip_atree = true
                 }
                 if is_allow_skip_atree {
                     *m_punct = make_null_group(m_punct.span());

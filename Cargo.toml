@@ -24,7 +24,6 @@ categories = [
 
 [features]
 default = [ ]
-escape_symbol = []
 
 [lib]
 proc-macro = true
