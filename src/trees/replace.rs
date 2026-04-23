@@ -6,39 +6,34 @@ use proc_macro2::{Group, TokenStream as TokenStream2, TokenTree as TokenTree2};
     TODO, At the moment this is not optimally done :(.
 */
 
-/// A small function that provides the ability
-/// to iterate and replace trees in place.
+/// Helper for in-place replacement of tokens within a Group.
+/// 
+/// Note: Due to `proc_macro2` API limitations, this performs a full 
+/// round-trip: Stream -> Vec -> Stream.
 pub fn replace_tree_in_group<R>(
     real_group: &mut Group,
-
     next: impl FnOnce(IterMut<'_, TokenTree2>) -> R,
 ) -> R {
-    let span = real_group.span();
-    let delimeter = real_group.delimiter();
+    let mut tokens: Vec<TokenTree2> = real_group.stream().into_iter().collect();
+    let result = next(tokens.iter_mut());
 
-    let mut allts: Vec<TokenTree2> = real_group.stream().into_iter().collect();
-    let result = next(allts.iter_mut());
-
-    let mut ngroup = Group::new(delimeter, TokenStream2::from_iter(allts));
-    ngroup.set_span(span);
-    *real_group = ngroup;
+    // Reconstruct the group with the same delimiter and span
+    let mut new_group = Group::new(real_group.delimiter(), TokenStream2::from_iter(tokens));
+    new_group.set_span(real_group.span());
+    *real_group = new_group;
 
     result
 }
 
-/// A small function that provides the ability
-/// to iterate and replace trees in place.
-///
-/// For a group, use the `replace_tree_in_group` function.
+/// Helper for in-place replacement of tokens within a TokenStream.
 pub fn replace_tree_in_stream<R>(
     stream: &mut TokenStream2,
-
     next: impl FnOnce(IterMut<'_, TokenTree2>) -> R,
 ) -> R {
-    let mut allts: Vec<TokenTree2> = core::mem::take(stream).into_iter().collect();
+    // mem::take is efficient here as it leaves an empty TokenStream
+    let mut tokens: Vec<TokenTree2> = std::mem::take(stream).into_iter().collect();
+    let result = next(tokens.iter_mut());
 
-    let result = next(allts.iter_mut());
-
-    *stream = TokenStream2::from_iter(allts);
+    *stream = TokenStream2::from_iter(tokens);
     result
 }
