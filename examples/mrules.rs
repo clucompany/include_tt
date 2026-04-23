@@ -40,7 +40,7 @@ fn main() {
         // a + b = n
         // or
         // a - b = n
-        #POINT_TRACKER_FILES:
+        #TRACK_FILES:
         test_rules! {
             #tt("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
         }

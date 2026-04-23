@@ -3,7 +3,7 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use std::{borrow::Cow, io::Error as IOError, path::Path};
 use syn::Error as SynError;
 
-use crate::PointTrack;
+use crate::points::file_dep_tracker::FileDepTracker;
 
 /// Variants of errors when loading a file and presenting it as a set of compiler trees.
 #[derive(Debug)]
@@ -41,7 +41,7 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 /// Load the file and present it as a compiler tree set.
 pub fn load_file_and_automake_tree<'path>(
     path: &'path Path,
-    point_track: Option<&'_ mut PointTrack>,
+    point_track: Option<&'_ mut FileDepTracker>,
 
     // Preprocessing a file loaded into a String before passing it directly to the parser.
     //
@@ -54,7 +54,7 @@ pub fn load_file_and_automake_tree<'path>(
 /// Load the file and present it as a compiler tree set.
 pub fn load_file_and_automake_tree_with_fns<'path, R>(
     path: &'path Path,
-    point_track: Option<&mut PointTrack>,
+    point_track: Option<&mut FileDepTracker>,
 
     // Preprocessing a file loaded into a String before passing it directly to the parser.
     //

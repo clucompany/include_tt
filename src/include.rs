@@ -1,6 +1,6 @@
 use crate::{
-    PointTrack,
     exprs::literal::ExprLit,
+    points::file_dep_tracker::FileDepTracker,
     trees::{
         group::stream_stringify_with_fns,
         loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
@@ -23,7 +23,7 @@ pub trait BehMacroInclude {
     /// Assembly of the final tree.
     fn make_tree(
         arg0: &ExprLit,
-        point_track_file: Option<&mut PointTrack>,
+        point_track_file: Option<&mut FileDepTracker>,
         //
         span: Span,
     ) -> TreeResult<Self::Result>;
@@ -46,7 +46,7 @@ impl BehMacroInclude for InjectTT {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut PointTrack>,
+        point_track: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
@@ -83,7 +83,7 @@ impl BehMacroInclude for InjectCTT {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut PointTrack>,
+        point_track: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
@@ -176,7 +176,7 @@ impl BehMacroInclude for InjectStr {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut PointTrack>,
+        point_track: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
@@ -221,7 +221,7 @@ impl BehMacroInclude for InjectArr {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut PointTrack>,
+        point_track: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
@@ -261,7 +261,7 @@ impl BehMacroInclude for InjectArr {
 /// Build macro `include`/`include_str`/`include_arr`.
 pub fn macro_rule_include<A>(
     group: &'_ Group,
-    point_track: Option<&mut PointTrack>,
+    point_track: Option<&mut FileDepTracker>,
 ) -> TreeResult<A::Result>
 where
     A: BehMacroInclude,
