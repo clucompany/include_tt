@@ -1,15 +1,15 @@
 use crate::{
-	PointTrack,
-	exprs::literal::ExprLit,
-	trees::{
-		group::stream_stringify_with_fns,
-		loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
-		null::make_null_group,
-		result::TreeResult,
-	},
+    PointTrack,
+    exprs::literal::ExprLit,
+    trees::{
+        group::stream_stringify_with_fns,
+        loader::{LoadFileAndAutoMakeTreeErr, load_file_and_automake_tree_with_fns},
+        null::make_null_group,
+        result::TreeResult,
+    },
 };
 use proc_macro2::{
-	Delimiter, Group, Literal, Span, TokenStream as TokenStream2, TokenTree as TokenTree2,
+    Delimiter, Group, Literal, Span, TokenStream as TokenStream2, TokenTree as TokenTree2,
 };
 use quote::ToTokens;
 use std::{borrow::Cow, io::Error as IOError, path::Path};
@@ -17,19 +17,19 @@ use std::{fs::File, io::Read};
 
 /// A trait that specifies the final behavior for the `include` macro.
 pub trait BehMacroInclude {
-	/// The result of building the tree, basically `TokenTree2`.
-	type Result;
+    /// The result of building the tree, basically `TokenTree2`.
+    type Result;
 
-	/// Assembly of the final tree.
-	fn make_tree(
-		arg0: &ExprLit,
-		point_track_file: Option<&mut PointTrack>,
-		//
-		span: Span,
-	) -> TreeResult<Self::Result>;
+    /// Assembly of the final tree.
+    fn make_tree(
+        arg0: &ExprLit,
+        point_track_file: Option<&mut PointTrack>,
+        //
+        span: Span,
+    ) -> TreeResult<Self::Result>;
 
-	/// Create an empty valid tree.
-	fn make_empty_tree(group_span: Span) -> Self::Result;
+    /// Create an empty valid tree.
+    fn make_empty_tree(group_span: Span) -> Self::Result;
 }
 
 /// Easily include trees from a file in your
@@ -37,34 +37,34 @@ pub trait BehMacroInclude {
 pub enum InjectTT {}
 
 impl BehMacroInclude for InjectTT {
-	type Result = TokenTree2;
+    type Result = TokenTree2;
 
-	#[inline]
-	fn make_empty_tree(group_span: Span) -> Self::Result {
-		make_null_group(group_span)
-	}
+    #[inline]
+    fn make_empty_tree(group_span: Span) -> Self::Result {
+        make_null_group(group_span)
+    }
 
-	fn make_tree(
-		sspath: &ExprLit,
-		point_track: Option<&mut PointTrack>,
+    fn make_tree(
+        sspath: &ExprLit,
+        point_track: Option<&mut PointTrack>,
 
-		span: Span,
-	) -> TreeResult<Self::Result> {
-		load_file_and_automake_tree_with_fns(
-			Path::new(sspath.as_str()),
-			point_track,
-			|_| {}, /* skip_prepare */
-			|fs_tt| {
-				let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
+        span: Span,
+    ) -> TreeResult<Self::Result> {
+        load_file_and_automake_tree_with_fns(
+            Path::new(sspath.as_str()),
+            point_track,
+            |_| {}, /* skip_prepare */
+            |fs_tt| {
+                let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
 
-				let mut ngroup = Group::new(Delimiter::None, ett);
-				ngroup.set_span(span);
+                let mut ngroup = Group::new(Delimiter::None, ett);
+                ngroup.set_span(span);
 
-				TreeResult::Ok(TokenTree2::Group(ngroup))
-			},
-			|e| TreeResult::Err(e.into_tt_err(span)),
-		)
-	}
+                TreeResult::Ok(TokenTree2::Group(ngroup))
+            },
+            |e| TreeResult::Err(e.into_tt_err(span)),
+        )
+    }
 }
 
 /// Regular macro `include_tt` with find and replace
@@ -74,90 +74,90 @@ impl BehMacroInclude for InjectTT {
 pub enum InjectCTT {}
 
 impl BehMacroInclude for InjectCTT {
-	type Result = TokenTree2;
+    type Result = TokenTree2;
 
-	#[inline]
-	fn make_empty_tree(group_span: Span) -> Self::Result {
-		make_null_group(group_span)
-	}
+    #[inline]
+    fn make_empty_tree(group_span: Span) -> Self::Result {
+        make_null_group(group_span)
+    }
 
-	fn make_tree(
-		sspath: &ExprLit,
-		point_track: Option<&mut PointTrack>,
+    fn make_tree(
+        sspath: &ExprLit,
+        point_track: Option<&mut PointTrack>,
 
-		span: Span,
-	) -> TreeResult<Self::Result> {
-		load_file_and_automake_tree_with_fns(
-			Path::new(sspath),
-			point_track,
-			|p_string| {
-				/* fix unk start token */
-				let mut p_str = p_string.as_mut();
-				while let Some(pos) = p_str.find('\\' /* one symb */) {
-					let right = unsafe {
-						debug_assert!(p_str.get(pos..).is_some());
+        span: Span,
+    ) -> TreeResult<Self::Result> {
+        load_file_and_automake_tree_with_fns(
+            Path::new(sspath),
+            point_track,
+            |p_string| {
+                /* fix unk start token */
+                let mut p_str = p_string.as_mut();
+                while let Some(pos) = p_str.find('\\' /* one symb */) {
+                    let right = unsafe {
+                        debug_assert!(p_str.get(pos..).is_some());
 
-						p_str.get_unchecked_mut(pos..)
-					};
+                        p_str.get_unchecked_mut(pos..)
+                    };
 
-					if right.len() >= 2 {
-						let (c_symbol, new_pstr) = right.split_at_mut(2);
-						let c_array = unsafe { c_symbol.as_bytes_mut() };
-						debug_assert_eq!(c_array.len(), 2);
-						debug_assert_eq!(
-							{
-								#[allow(clippy::get_first)]
-								// why?, this is done to be completely analogous to an unsafe function.
-								c_array.get(0)
-							},
-							Some(&b'\\')
-						);
-						debug_assert!(c_array.get(1).is_some());
+                    if right.len() >= 2 {
+                        let (c_symbol, new_pstr) = right.split_at_mut(2);
+                        let c_array = unsafe { c_symbol.as_bytes_mut() };
+                        debug_assert_eq!(c_array.len(), 2);
+                        debug_assert_eq!(
+                            {
+                                #[allow(clippy::get_first)]
+                                // why?, this is done to be completely analogous to an unsafe function.
+                                c_array.get(0)
+                            },
+                            Some(&b'\\')
+                        );
+                        debug_assert!(c_array.get(1).is_some());
 
-						match unsafe { c_array.get_unchecked(1) } {
-							b'\n' | b'\t' | b'\r' | b' ' => {
-								// This is generally safe as the '/'
-								// characters were found using utf-8 lookups.
-								let a_repl = unsafe { c_array.get_unchecked_mut(0) };
-								*a_repl = b' ';
-							}
-							/*b'\\' => {
-								// This is generally safe as the '/'
-								// characters were found using utf-8 lookups.
-								for a in c_array {
-									*a = b' ';
-								}
-							},*/
-							_ => {}
-						}
+                        match unsafe { c_array.get_unchecked(1) } {
+                            b'\n' | b'\t' | b'\r' | b' ' => {
+                                // This is generally safe as the '/'
+                                // characters were found using utf-8 lookups.
+                                let a_repl = unsafe { c_array.get_unchecked_mut(0) };
+                                *a_repl = b' ';
+                            }
+                            /*b'\\' => {
+                                // This is generally safe as the '/'
+                                // characters were found using utf-8 lookups.
+                                for a in c_array {
+                                    *a = b' ';
+                                }
+                            },*/
+                            _ => {}
+                        }
 
-						if new_pstr.is_empty() {
-							break;
-						}
-						p_str = new_pstr;
-					} else {
-						// This is generally safe as the '/'
-						// characters were found using utf-8 lookups.
-						let array = unsafe { right.as_bytes_mut() }.iter_mut();
-						for a in array {
-							*a = b' ';
-						}
+                        if new_pstr.is_empty() {
+                            break;
+                        }
+                        p_str = new_pstr;
+                    } else {
+                        // This is generally safe as the '/'
+                        // characters were found using utf-8 lookups.
+                        let array = unsafe { right.as_bytes_mut() }.iter_mut();
+                        for a in array {
+                            *a = b' ';
+                        }
 
-						break;
-					}
-				}
-			},
-			|fs_tt| {
-				let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
+                        break;
+                    }
+                }
+            },
+            |fs_tt| {
+                let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
 
-				let mut ngroup = Group::new(Delimiter::None, ett);
-				ngroup.set_span(span);
+                let mut ngroup = Group::new(Delimiter::None, ett);
+                ngroup.set_span(span);
 
-				TreeResult::Ok(TokenTree2::Group(ngroup))
-			},
-			|e| TreeResult::Err(e.into_tt_err(span)),
-		)
-	}
+                TreeResult::Ok(TokenTree2::Group(ngroup))
+            },
+            |e| TreeResult::Err(e.into_tt_err(span)),
+        )
+    }
 }
 
 /// Includes the entire file as a single line,
@@ -165,44 +165,44 @@ impl BehMacroInclude for InjectCTT {
 pub enum InjectStr {}
 
 impl BehMacroInclude for InjectStr {
-	type Result = TokenTree2;
+    type Result = TokenTree2;
 
-	fn make_empty_tree(group_span: Span) -> Self::Result {
-		let mut lit = Literal::string("");
-		lit.set_span(group_span);
+    fn make_empty_tree(group_span: Span) -> Self::Result {
+        let mut lit = Literal::string("");
+        lit.set_span(group_span);
 
-		TokenTree2::Literal(lit)
-	}
+        TokenTree2::Literal(lit)
+    }
 
-	fn make_tree(
-		sspath: &ExprLit,
-		point_track: Option<&mut PointTrack>,
+    fn make_tree(
+        sspath: &ExprLit,
+        point_track: Option<&mut PointTrack>,
 
-		span: Span,
-	) -> TreeResult<Self::Result> {
-		let path = Path::new(sspath);
+        span: Span,
+    ) -> TreeResult<Self::Result> {
+        let path = Path::new(sspath);
 
-		match std::fs::read_to_string(path) {
-			Ok(data) => {
-				if let Some(point_track) = point_track {
-					point_track.append_track_file(path);
-				}
-				let mut lit = Literal::string(&data);
-				lit.set_span(span);
+        match std::fs::read_to_string(path) {
+            Ok(data) => {
+                if let Some(point_track) = point_track {
+                    point_track.append_track_file(path);
+                }
+                let mut lit = Literal::string(&data);
+                lit.set_span(span);
 
-				TreeResult::Ok(TokenTree2::Literal(lit))
-			}
-			Err(e) => {
-				let path = path
-					.canonicalize()
-					.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
+                TreeResult::Ok(TokenTree2::Literal(lit))
+            }
+            Err(e) => {
+                let path = path
+                    .canonicalize()
+                    .map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
 
-				TreeResult::Err(
-					LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(span),
-				)
-			}
-		}
-	}
+                TreeResult::Err(
+                    LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(span),
+                )
+            }
+        }
+    }
 }
 
 /// Includes the entire file as a binary array,
@@ -210,74 +210,74 @@ impl BehMacroInclude for InjectStr {
 pub enum InjectArr {}
 
 impl BehMacroInclude for InjectArr {
-	type Result = TokenTree2;
+    type Result = TokenTree2;
 
-	fn make_empty_tree(group_span: Span) -> Self::Result {
-		let mut lit = Literal::byte_string(&[]);
-		lit.set_span(group_span);
+    fn make_empty_tree(group_span: Span) -> Self::Result {
+        let mut lit = Literal::byte_string(&[]);
+        lit.set_span(group_span);
 
-		TokenTree2::Literal(lit)
-	}
+        TokenTree2::Literal(lit)
+    }
 
-	fn make_tree(
-		sspath: &ExprLit,
-		point_track: Option<&mut PointTrack>,
+    fn make_tree(
+        sspath: &ExprLit,
+        point_track: Option<&mut PointTrack>,
 
-		span: Span,
-	) -> TreeResult<Self::Result> {
-		let path = Path::new(sspath);
-		let vec = {
-			let make_err = |e: IOError| {
-				let path = path
-					.canonicalize()
-					.map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
-				TreeResult::from(
-					LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(span),
-				)
-			};
-			let mut file = match File::open(path) {
-				Ok(a) => a,
-				Err(e) => return make_err(e),
-			};
+        span: Span,
+    ) -> TreeResult<Self::Result> {
+        let path = Path::new(sspath);
+        let vec = {
+            let make_err = |e: IOError| {
+                let path = path
+                    .canonicalize()
+                    .map_or_else(|_| Cow::Borrowed(path), Cow::Owned);
+                TreeResult::from(
+                    LoadFileAndAutoMakeTreeErr::read_to_string(e, path).into_tt_err(span),
+                )
+            };
+            let mut file = match File::open(path) {
+                Ok(a) => a,
+                Err(e) => return make_err(e),
+            };
 
-			let mut vec = Vec::new(); // capacity is not required.
-			if let Err(e) = file.read_to_end(&mut vec) {
-				return make_err(e);
-			};
+            let mut vec = Vec::new(); // capacity is not required.
+            if let Err(e) = file.read_to_end(&mut vec) {
+                return make_err(e);
+            };
 
-			vec
-		};
+            vec
+        };
 
-		if let Some(point_track) = point_track {
-			point_track.append_track_file(path);
-		}
-		let mut lit = Literal::byte_string(&vec);
-		lit.set_span(span);
+        if let Some(point_track) = point_track {
+            point_track.append_track_file(path);
+        }
+        let mut lit = Literal::byte_string(&vec);
+        lit.set_span(span);
 
-		TreeResult::Ok(TokenTree2::Literal(lit))
-	}
+        TreeResult::Ok(TokenTree2::Literal(lit))
+    }
 }
 
 /// Build macro `include`/`include_str`/`include_arr`.
 pub fn macro_rule_include<A>(
-	group: &'_ Group,
-	point_track: Option<&mut PointTrack>,
+    group: &'_ Group,
+    point_track: Option<&mut PointTrack>,
 ) -> TreeResult<A::Result>
 where
-	A: BehMacroInclude,
+    A: BehMacroInclude,
 {
-	let span = group.span();
-	let stream = group.into_token_stream();
-	stream_stringify_with_fns(
-		stream,
-		|stringify| {
-			let exprlit = unsafe { ExprLit::new_unchecked(&stringify) };
+    let span = group.span();
+    let stream = group.into_token_stream();
+    stream_stringify_with_fns(
+        stream,
+        |stringify| {
+            let exprlit = unsafe { ExprLit::new_unchecked(&stringify) };
 
-			A::make_tree(exprlit, point_track, span)
-		},
-		// Empty
-		|| TreeResult::Ok(A::make_empty_tree(span)),
-		// Err
-		TreeResult::Err,
-	)
+            A::make_tree(exprlit, point_track, span)
+        },
+        // Empty
+        || TreeResult::Ok(A::make_empty_tree(span)),
+        // Err
+        TreeResult::Err,
+    )
 }

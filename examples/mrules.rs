@@ -32,19 +32,19 @@ macro_rules! test_rules {
 }
 
 fn main() {
-	let a = 10;
-	let b = 20;
+    let a = 10;
+    let b = 20;
 
-	inject! {
-		// this macro only supports:
-		// a + b = n
-		// or
-		// a - b = n
-		#POINT_TRACKER_FILES:
-		test_rules! {
-			#tt("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
-		}
-	}
-	assert_eq!(n, a + b);
-	println!("n: {n:?}"); // 30
+    inject! {
+        // this macro only supports:
+        // a + b = n
+        // or
+        // a - b = n
+        #POINT_TRACKER_FILES:
+        test_rules! {
+            #tt("./examples/mrules.tt") // this file contains "a + b = n", see "./for_examples/mrules.tt"
+        }
+    }
+    assert_eq!(n, a + b);
+    println!("n: {n:?}"); // 30
 }

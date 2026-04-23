@@ -20,12 +20,12 @@ macro_rules! new_module {
 }
 
 fn main() {
-	// we created a module "my_module" and a constant "T" containing (a, b).
-	//
-	// if you need to change, for example, to (b,a) or substitute constant values,
-	// we will only change the contents of the file "for_examples/full.tt"!
-	new_module! {
-		@(T): [examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
-	}
-	assert_eq!(my_module::T, (0, 10));
+    // we created a module "my_module" and a constant "T" containing (a, b).
+    //
+    // if you need to change, for example, to (b,a) or substitute constant values,
+    // we will only change the contents of the file "for_examples/full.tt"!
+    new_module! {
+        @(T): [examples / "full" . t 't']; // this file contains "a, b", see "for_examples/full.tt"
+    }
+    assert_eq!(my_module::T, (0, 10));
 }

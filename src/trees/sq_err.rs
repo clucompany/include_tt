@@ -52,7 +52,7 @@ macro_rules! __sq_err_format {
 			in [ $($all)* ]
 		}
 	};
-	
+
 	[
 		@let_block:
 		in[ # {$n:ident} $($all:tt)* ]
@@ -100,7 +100,7 @@ macro_rules! __sq_err_format {
 			}
 		}
 	};
-	
+
 	[ // {}
 		quote::quote_spanned! {
 			$span:expr =>

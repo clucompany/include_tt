@@ -1,79 +1,79 @@
 use crate::{TreeResult, exprs::literal::ExprLit, sq_err, trees::tq};
 use alloc::{
-	fmt::Write,
-	format,
-	string::{String, ToString},
+    fmt::Write,
+    format,
+    string::{String, ToString},
 };
 use proc_macro2::{TokenStream as TokenStream2, TokenTree as TokenTree2};
 
 /// A small function that mimics the incomplete behavior of stringify for stream.
 pub fn stream_stringify_with_fns<R>(
-	stream: TokenStream2,
-	next: impl FnOnce(String) -> R,
-	empty: impl FnOnce() -> R,
-	err: impl FnOnce(TokenStream2) -> R,
+    stream: TokenStream2,
+    next: impl FnOnce(String) -> R,
+    empty: impl FnOnce() -> R,
+    err: impl FnOnce(TokenStream2) -> R,
 ) -> R {
-	let mut result = String::new();
+    let mut result = String::new();
 
-	let iter = stream.into_iter();
-	for tt in iter {
-		if let TreeResult::Err(e) = __g_stringify(tt, &mut result) {
-			return err(e);
-		}
-	}
+    let iter = stream.into_iter();
+    for tt in iter {
+        if let TreeResult::Err(e) = __g_stringify(tt, &mut result) {
+            return err(e);
+        }
+    }
 
-	if result.is_empty() {
-		return empty();
-	}
+    if result.is_empty() {
+        return empty();
+    }
 
-	next(result)
+    next(result)
 }
 
 fn __g_stringify(tt: TokenTree2, w: &mut impl Write) -> TreeResult<()> {
-	/*
-		TODO, Not fully covered by tests.
-	*/
-	match tt {
-		TokenTree2::Group(group) => {
-			let iter = group.stream().into_iter();
-			for tt in iter {
-				tq!(__g_stringify(tt, w));
-			}
-		}
-		TokenTree2::Ident(i) => {
-			if let Err(e) = write!(w, "{}", i) {
-				sq_err! {
-					return [i.span()]: "Ident, ", #{e:?}
-				}
-			}
-		}
-		TokenTree2::Punct(p) => {
-			if let Err(e) = w.write_char(p.as_char()) {
-				sq_err! {
-					return [p.span()]: "Punct, ", #{e:?}
-				}
-			}
-		}
-		TokenTree2::Literal(l) => {
-			return ExprLit::try_new_with_fns(
-				&l.to_string(),
-				|sspath| match write!(w, "{}", sspath) {
-					Ok(..) => TreeResult::Ok(()),
-					Err(e) => sq_err! {
-						return [l.span()]: "Literal, ", #{e:?}
-					}
-				},
-				|e| {
-					let span = l.span();
-					let debug = e.into_tt_err(span);
+    /*
+        TODO, Not fully covered by tests.
+    */
+    match tt {
+        TokenTree2::Group(group) => {
+            let iter = group.stream().into_iter();
+            for tt in iter {
+                tq!(__g_stringify(tt, w));
+            }
+        }
+        TokenTree2::Ident(i) => {
+            if let Err(e) = write!(w, "{}", i) {
+                sq_err! {
+                    return [i.span()]: "Ident, ", #{e:?}
+                }
+            }
+        }
+        TokenTree2::Punct(p) => {
+            if let Err(e) = w.write_char(p.as_char()) {
+                sq_err! {
+                    return [p.span()]: "Punct, ", #{e:?}
+                }
+            }
+        }
+        TokenTree2::Literal(l) => {
+            return ExprLit::try_new_with_fns(
+                &l.to_string(),
+                |sspath| match write!(w, "{}", sspath) {
+                    Ok(..) => TreeResult::Ok(()),
+                    Err(e) => sq_err! {
+                        return [l.span()]: "Literal, ", #{e:?}
+                    },
+                },
+                |e| {
+                    let span = l.span();
+                    let debug = e.into_tt_err(span);
 
-					sq_err! {
-						return [span]: "Literal, ", #debug
-					}
-				},
-			);
-		}
-	}
+                    sq_err! {
+                        return [span]: "Literal, ", #debug
+                    }
+                },
+            );
+        }
+    }
 
-	TreeResult::Ok(())
+    TreeResult::Ok(())
 }

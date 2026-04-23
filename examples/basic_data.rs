@@ -43,54 +43,54 @@ macro_rules! test2_rules {
 }
 
 fn main() {
-	// Loading trees from a file and substituting them into a custom macro.
-	inject! {
-		#POINT_TRACKER_FILES:
-		test2_rules! {
-			[ #tt("./examples/full.tt") ] // this file contains `a, b`.
-			[ #tt { "./examples/full.tt" } ] // this file contains `a, b`.
-		}
-		test2_rules! {
-			#tt ("./examples/full.tt") // this file contains `a, b`.
-		}
+    // Loading trees from a file and substituting them into a custom macro.
+    inject! {
+        #POINT_TRACKER_FILES:
+        test2_rules! {
+            [ #tt("./examples/full.tt") ] // this file contains `a, b`.
+            [ #tt { "./examples/full.tt" } ] // this file contains `a, b`.
+        }
+        test2_rules! {
+            #tt ("./examples/full.tt") // this file contains `a, b`.
+        }
 
-		println!(
-			concat!(
-				"#",
-				#str("./examples/full.tt"), // this file contains `a, b`.
-				"#"
-			)
-		);
-	}
+        println!(
+            concat!(
+                "#",
+                #str("./examples/full.tt"), // this file contains `a, b`.
+                "#"
+            )
+        );
+    }
 
-	{
-		// Loading a string from a file.
-		let str = inject!(#str("./examples/full.tt")); // this file contains `a, b`.
-		assert_eq!(str, "a, b");
-	}
+    {
+        // Loading a string from a file.
+        let str = inject!(#str("./examples/full.tt")); // this file contains `a, b`.
+        assert_eq!(str, "a, b");
+    }
 
-	{
-		// Loading an array from a file.
-		let array: &'static [u8; 4] = inject!(
-			#array("./examples/full.tt") // this file contains `a, b`.
-		);
-		assert_eq!(array, b"a, b");
-	}
+    {
+        // Loading an array from a file.
+        let array: &'static [u8; 4] = inject!(
+            #array("./examples/full.tt") // this file contains `a, b`.
+        );
+        assert_eq!(array, b"a, b");
+    }
 
-	{
-		// Embedding compiler trees from a file in an arbitrary place of other macros.
-		let a = 10;
-		let b = 20;
+    {
+        // Embedding compiler trees from a file in an arbitrary place of other macros.
+        let a = 10;
+        let b = 20;
 
-		let mut end_str = String::new();
-		inject! {
-			let _e = write!(
-				&mut end_str,
+        let mut end_str = String::new();
+        inject! {
+            let _e = write!(
+                &mut end_str,
 
-				"arg1: {}, arg2: {}",
-				#tt("./examples/full.tt") // this file contains `a, b`.
-			);
-		}
-		assert_eq!(end_str, "arg1: 10, arg2: 20");
-	}
+                "arg1: {}, arg2: {}",
+                #tt("./examples/full.tt") // this file contains `a, b`.
+            );
+        }
+        assert_eq!(end_str, "arg1: 10, arg2: 20");
+    }
 }
