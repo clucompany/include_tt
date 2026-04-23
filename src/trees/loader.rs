@@ -41,20 +41,20 @@ impl<'a> LoadFileAndAutoMakeTreeErr<'a> {
 /// Load the file and present it as a compiler tree set.
 pub fn load_file_and_automake_tree<'path>(
     path: &'path Path,
-    point_track: Option<&'_ mut FileDepTracker>,
+    tracker: Option<&'_ mut FileDepTracker>,
 
     // Preprocessing a file loaded into a String before passing it directly to the parser.
     //
     // (If this is not required, it is enough to leave the closure empty.)
     prepare_file_str: impl FnOnce(&mut String),
 ) -> Result<Option<TokenStream2>, LoadFileAndAutoMakeTreeErr<'path>> {
-    load_file_and_automake_tree_with_fns(path, point_track, prepare_file_str, Ok, Err)
+    load_file_and_automake_tree_with_fns(path, tracker, prepare_file_str, Ok, Err)
 }
 
 /// Load the file and present it as a compiler tree set.
 pub fn load_file_and_automake_tree_with_fns<'path, R>(
     path: &'path Path,
-    point_track: Option<&mut FileDepTracker>,
+    tracker: Option<&mut FileDepTracker>,
 
     // Preprocessing a file loaded into a String before passing it directly to the parser.
     //
@@ -73,8 +73,8 @@ pub fn load_file_and_automake_tree_with_fns<'path, R>(
             return err(LoadFileAndAutoMakeTreeErr::read_to_string(e, path));
         }
     };
-    if let Some(point_track) = point_track {
-        point_track.append_track_file(path);
+    if let Some(tracker) = tracker {
+        tracker.append_track_file(path);
     }
 
     if data.is_empty() {

@@ -127,7 +127,7 @@ pub(crate) mod points {
 fn autoinject_tt_in_group<'tk, 'gpsn>(
     globalposnum: &'gpsn mut usize,
     mut iter: IterMut<'tk, TokenTree2>,
-    point_track_file: &'_ mut Option<FileDepTracker<'tk>>,
+    tracker: &'_ mut Option<FileDepTracker<'tk>>,
 ) -> SearchGroup {
     'sbegin: while let Some(mut m_punct) = iter.next() {
         'match_m_punct: loop {
@@ -177,7 +177,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
                                     && let TokenTree2::Punct(punct2) = m_punct2
                                     && punct2.as_char() == ':'
                                 {
-                                    *point_track_file = Some(FileDepTracker::new(
+                                    *tracker = Some(FileDepTracker::new(
                                         *globalposnum,
                                         m_punct,
                                         m_ident,
@@ -232,7 +232,7 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
                         if let Some(m_group) = iter.next()
                             && let TokenTree2::Group(group) = m_group
                         {
-                            let result = tq!(macro_fn(group, point_track_file.as_mut()));
+                            let result = tq!(macro_fn(group, tracker.as_mut()));
 
                             *m_ident = make_null_group(m_ident.span());
                             *m_punct = make_null_group(m_punct.span());
@@ -253,11 +253,11 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
                     let mut namegroup;
                     let mut datagroup;
                     #[allow(clippy::manual_map)]
-                    let mut ptf = match point_track_file {
-                        Some(point_track_file) => Some({
-                            prefixgroup = make_null_group(point_track_file.prefix_span());
-                            namegroup = make_null_group(point_track_file.name_span());
-                            datagroup = make_null_group(point_track_file.data_span());
+                    let mut ptf = match tracker {
+                        Some(tracker) => Some({
+                            prefixgroup = make_null_group(tracker.prefix_span());
+                            namegroup = make_null_group(tracker.name_span());
+                            datagroup = make_null_group(tracker.data_span());
 
                             FileDepTracker::new(
                                 *globalposnum,
@@ -272,13 +272,13 @@ fn autoinject_tt_in_group<'tk, 'gpsn>(
                     let result = autoinject_tt_in_group(globalposnum, iter, &mut ptf);
                     if let Some(ptf) = ptf
                         && ptf.is_rewritten()
-                        && let Some(point_track_file) = point_track_file
+                        && let Some(tracker) = tracker
                     {
                         match ptf.into_token_tree2() {
                             Some((appends_files, TokenTree2::Group(group))) => {
                                 *globalposnum += appends_files;
 
-                                point_track_file.append_track_files_ts(group.stream());
+                                tracker.append_track_files_ts(group.stream());
                             }
                             _ => panic!(
                                 "Undefined behavior reported in `PointTrack`, someone redefined `TokenTree2`, expected `TokenTree2::Group`"
