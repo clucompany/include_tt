@@ -15,20 +15,21 @@ use quote::ToTokens;
 use std::{borrow::Cow, io::Error as IOError, path::Path};
 use std::{fs::File, io::Read};
 
-/// A trait that specifies the final behavior for the `include` macro.
+/// Trait defining the behavior for data injection directives (like #tt, #str, #arr).
 pub trait BehMacroInclude {
-    /// The result of building the tree, basically `TokenTree2`.
+    /// The resulting output of the injection, usually a `TokenTree2`.
     type Result;
 
-    /// Assembly of the final tree.
+    /// Constructs the final tree by processing the input literal and tracking dependencies.
     fn make_tree(
-        arg0: &ExprLit,
-        point_track_file: Option<&mut FileDepTracker>,
+        input: &ExprLit,
+        tracker: Option<&mut FileDepTracker>,
         //
         span: Span,
     ) -> TreeResult<Self::Result>;
 
-    /// Create an empty valid tree.
+    /// Generates a valid "empty" state for this injection type.
+    /// Used as a fallback or to represent a null operation.
     fn make_empty_tree(group_span: Span) -> Self::Result;
 }
 
@@ -46,13 +47,13 @@ impl BehMacroInclude for InjectTT {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut FileDepTracker>,
+        tracker: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
         load_file_and_automake_tree_with_fns(
             Path::new(sspath.as_str()),
-            point_track,
+            tracker,
             |_| {}, /* skip_prepare */
             |fs_tt| {
                 let ett = fs_tt.map_or_else(TokenStream2::new, TokenStream2::from_iter);
@@ -83,13 +84,13 @@ impl BehMacroInclude for InjectCTT {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut FileDepTracker>,
+        tracker: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
         load_file_and_automake_tree_with_fns(
             Path::new(sspath),
-            point_track,
+            tracker,
             |p_string| {
                 /* fix unk start token */
                 let mut p_str = p_string.as_mut();
@@ -176,7 +177,7 @@ impl BehMacroInclude for InjectStr {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut FileDepTracker>,
+        tracker: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
@@ -184,8 +185,8 @@ impl BehMacroInclude for InjectStr {
 
         match std::fs::read_to_string(path) {
             Ok(data) => {
-                if let Some(point_track) = point_track {
-                    point_track.append_track_file(path);
+                if let Some(tracker) = tracker {
+                    tracker.append_track_file(path);
                 }
                 let mut lit = Literal::string(&data);
                 lit.set_span(span);
@@ -221,7 +222,7 @@ impl BehMacroInclude for InjectArr {
 
     fn make_tree(
         sspath: &ExprLit,
-        point_track: Option<&mut FileDepTracker>,
+        tracker: Option<&mut FileDepTracker>,
 
         span: Span,
     ) -> TreeResult<Self::Result> {
@@ -248,8 +249,8 @@ impl BehMacroInclude for InjectArr {
             vec
         };
 
-        if let Some(point_track) = point_track {
-            point_track.append_track_file(path);
+        if let Some(tracker) = tracker {
+            tracker.append_track_file(path);
         }
         let mut lit = Literal::byte_string(&vec);
         lit.set_span(span);
@@ -261,7 +262,7 @@ impl BehMacroInclude for InjectArr {
 /// Build macro `include`/`include_str`/`include_arr`.
 pub fn macro_rule_include<A>(
     group: &'_ Group,
-    point_track: Option<&mut FileDepTracker>,
+    tracker: Option<&mut FileDepTracker>,
 ) -> TreeResult<A::Result>
 where
     A: BehMacroInclude,
@@ -273,7 +274,7 @@ where
         |stringify| {
             let exprlit = unsafe { ExprLit::new_unchecked(&stringify) };
 
-            A::make_tree(exprlit, point_track, span)
+            A::make_tree(exprlit, tracker, span)
         },
         // Empty
         || TreeResult::Ok(A::make_empty_tree(span)),
